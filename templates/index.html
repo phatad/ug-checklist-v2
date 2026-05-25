@@ -4,636 +4,353 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>UG Checklist v2</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <style>
 :root {
-  --bg:       #080c10;
-  --surface:  #0d1117;
-  --card:     #161b22;
-  --border:   #21262d;
-  --accent:   #58a6ff;
-  --green:    #00e676;
-  --red:      #ff1744;
-  --orange:   #ffa000;
-  --text:     #e6edf3;
-  --muted:    #8b949e;
-  --mono:     'JetBrains Mono', monospace;
-  --sans:     'Be Vietnam Pro', sans-serif;
+  --bg:#080c10; --surface:#0d1117; --card:#161b22; --border:#21262d;
+  --accent:#58a6ff; --green:#00e676; --red:#ff1744; --orange:#ffa000;
+  --text:#e6edf3; --muted:#8b949e;
+  --mono:'JetBrains Mono',monospace; --sans:'Be Vietnam Pro',sans-serif;
 }
-* { margin:0; padding:0; box-sizing:border-box; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-  min-height: 100vh;
-  overflow-x: hidden;
-}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans)}
 
-/* ── Header ── */
-.header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 18px 28px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}
-.logo {
-  font-family: var(--mono);
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 2px;
-}
-.logo span { color: var(--green); }
-.header-sub { font-size: 12px; color: var(--muted); font-family: var(--mono); }
-.dot { width:8px; height:8px; border-radius:50%; background:var(--green);
-       box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; margin-left: auto; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+/* Header */
+.hdr{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface);height:48px}
+.logo{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent);letter-spacing:2px}
+.logo span{color:var(--green)}
+.hdr-sub{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);animation:pulse 2s infinite;margin-left:auto}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* ── Layout ── */
-.layout { display: grid; grid-template-columns: 300px 1fr; height: calc(100vh - 57px); }
+/* Layout: sidebar | main */
+.layout{display:grid;grid-template-columns:260px 1fr;height:calc(100vh - 48px);overflow:hidden}
 
-/* ── Sidebar ── */
-.sidebar {
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  overflow-y: auto;
-  padding: 0;
-}
-.sidebar::-webkit-scrollbar { width: 4px; }
-.sidebar::-webkit-scrollbar-track { background: transparent; }
-.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+/* Sidebar */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.sec{padding:12px 14px;border-bottom:1px solid var(--border)}
+.sec-title{font-size:9px;font-family:var(--mono);color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+.field{margin-bottom:8px}
+.field label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
+.field input,.field select{width:100%;background:var(--card);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:12px;padding:6px 8px;outline:none;transition:border-color .15s}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.cbrow{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.cbrow label{font-size:11px;color:var(--muted);margin-bottom:0}
+.cbrow input[type=checkbox]{width:auto;accent-color:var(--accent)}
+.cbrow input[type=number]{width:55px;margin-left:auto;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:12px;padding:4px 6px;outline:none}
+.btn{width:100%;padding:11px;background:var(--accent);color:#000;font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:1px;border:none;border-radius:7px;cursor:pointer;transition:all .15s;margin-top:2px}
+.btn:hover{background:#79b8ff;transform:translateY(-1px)}
+.btn:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;transform:none}
 
-.section {
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border);
-}
-.section-title {
-  font-size: 10px;
-  font-family: var(--mono);
-  color: var(--muted);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-}
+/* Main */
+.main{display:flex;flex-direction:column;overflow:hidden;height:100%}
 
-.field { margin-bottom: 10px; }
-.field label {
-  display: block;
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-.field input, .field select {
-  width: 100%;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 13px;
-  padding: 7px 10px;
-  outline: none;
-  transition: border-color .2s;
-}
-.field input:focus, .field select:focus {
-  border-color: var(--accent);
-}
-.field input[type="checkbox"] {
-  width: auto; accent-color: var(--accent);
-}
-.checkbox-row {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
-}
-.checkbox-row label { margin-bottom: 0; font-size: 12px; color: var(--muted); }
+/* Score bar */
+.score-bar{display:grid;grid-template-columns:repeat(4,1fr) 150px;border-bottom:1px solid var(--border);background:var(--surface)}
+.cond{background:var(--surface);padding:8px 12px;border-right:1px solid var(--border);transition:background .2s}
+.cond.ok{background:rgba(0,230,118,.06)}
+.cond.fail{background:rgba(255,23,68,.04)}
+.cond-lbl{font-size:9px;font-family:var(--mono);color:var(--muted);letter-spacing:1px;margin-bottom:2px}
+.cond-ico{font-size:14px;margin-bottom:1px}
+.cond-txt{font-size:10px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.action{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 12px;gap:2px}
+.a-score{font-family:var(--mono);font-size:22px;font-weight:700}
+.a-label{font-size:11px;font-weight:600;text-align:center}
+.a-dir{font-size:10px;color:var(--muted)}
 
-.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+/* Chart fills remaining space */
+.chart-area{flex:1;position:relative;min-height:0}
+#chart{width:100%;height:100%}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,12,16,.92);z-index:10;gap:12px;font-family:var(--mono)}
+.overlay.hidden{display:none}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-txt{color:var(--muted);font-size:12px}
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;font-family:var(--mono)}
+.w-icon{font-size:40px}
+.w-txt{color:var(--muted);font-size:12px}
 
-.btn-run {
-  width: 100%;
-  padding: 12px;
-  background: var(--accent);
-  color: #000;
-  font-family: var(--mono);
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 1px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all .2s;
-  margin-top: 4px;
-}
-.btn-run:hover { background: #79b8ff; transform: translateY(-1px); }
-.btn-run:active { transform: translateY(0); }
-.btn-run:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
-
-/* ── Main ── */
-.main {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* ── Score bar ── */
-.score-bar {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr) auto;
-  gap: 1px;
-  background: var(--border);
-  border-bottom: 1px solid var(--border);
-  min-height: 72px;
-}
-.cond-cell {
-  background: var(--surface);
-  padding: 10px 14px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 3px;
-  transition: background .3s;
-}
-.cond-cell.ok   { background: rgba(0,230,118,.05); }
-.cond-cell.fail { background: rgba(255,23,68,.04); }
-.cond-label { font-size: 10px; color: var(--muted); font-family: var(--mono); letter-spacing:1px; }
-.cond-icon  { font-size: 16px; }
-.cond-txt   { font-size: 11px; color: var(--text); }
-
-.action-cell {
-  background: var(--surface);
-  padding: 10px 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-width: 160px;
-  border-left: 1px solid var(--border);
-}
-.action-score { font-family: var(--mono); font-size: 26px; font-weight: 700; }
-.action-label { font-size: 13px; font-weight: 600; }
-.action-dir   { font-size: 11px; color: var(--muted); }
-
-/* ── Chart area ── */
-.chart-wrap { flex: 1; position: relative; }
-#chart { width: 100%; height: 100%; }
-
-/* ── Bottom panel ── */
-.bottom { 
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-  padding: 10px 18px;
-  display: flex;
-  gap: 24px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.stat { font-size: 11px; font-family: var(--mono); }
-.stat span { color: var(--muted); margin-right: 4px; }
-
-/* ── Signals table ── */
-.signals-wrap {
-  padding: 0 18px 14px;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-}
-.signals-title {
-  font-size: 10px; font-family: var(--mono); color: var(--muted);
-  letter-spacing: 2px; text-transform: uppercase;
-  padding: 10px 0 8px;
-}
-.signals-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; }
-.signals-table th {
-  color: var(--muted); text-align: left; padding: 4px 10px 4px 0;
-  font-weight: 400; border-bottom: 1px solid var(--border);
-}
-.signals-table td { padding: 5px 10px 5px 0; border-bottom: 1px solid rgba(33,38,45,.6); }
-.signals-table tr:hover td { background: rgba(88,166,255,.04); }
-
-/* ── Loading / Error ── */
-.overlay {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  background: rgba(8,12,16,.9);
-  z-index: 10;
-  gap: 14px;
-  font-family: var(--mono);
-}
-.overlay.hidden { display: none; }
-.spinner {
-  width: 36px; height: 36px;
-  border: 3px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin .8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.loading-txt { color: var(--muted); font-size: 13px; }
-.error-txt { color: var(--red); font-size: 12px; max-width: 400px; text-align: center; line-height: 1.5; }
-
-/* Welcome screen */
-.welcome {
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  height: 100%; gap: 12px;
-  font-family: var(--mono);
-}
-.welcome-icon { font-size: 48px; }
-.welcome-txt  { color: var(--muted); font-size: 13px; }
+/* Bottom: stats + signals side by side */
+.bottom-bar{display:flex;align-items:stretch;border-top:1px solid var(--border);background:var(--surface);max-height:140px;min-height:110px}
+.stats-col{padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:5px;border-right:1px solid var(--border);min-width:260px}
+.stat{font-size:10px;font-family:var(--mono)}
+.stat span{color:var(--muted);margin-right:4px}
+.sigs-col{flex:1;overflow:hidden;padding:6px 14px}
+.sigs-title{font-size:9px;font-family:var(--mono);color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:5px}
+.sigs-tbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10px}
+.sigs-tbl th{color:var(--muted);text-align:left;padding:2px 8px 2px 0;font-weight:400;border-bottom:1px solid var(--border)}
+.sigs-tbl td{padding:3px 8px 3px 0;border-bottom:1px solid rgba(33,38,45,.5)}
+.sigs-tbl tr:hover td{background:rgba(88,166,255,.04)}
 </style>
 </head>
 <body>
-
-<div class="header">
+<div class="hdr">
   <div>
     <div class="logo">UG <span>CHECKLIST</span> v2</div>
-    <div class="header-sub">PA System — Chứng khoán Việt Nam</div>
+    <div class="hdr-sub">PA System — Chứng khoán Việt Nam</div>
   </div>
-  <div class="dot" id="statusDot"></div>
+  <div class="dot"></div>
 </div>
 
 <div class="layout">
   <!-- SIDEBAR -->
   <aside class="sidebar">
-
-    <div class="section">
-      <div class="section-title">📈 Cổ phiếu</div>
+    <div class="sec">
+      <div class="sec-title">📈 Cổ phiếu</div>
       <div class="field">
         <label>Mã cổ phiếu</label>
-        <input id="symbol" value="VNM" placeholder="VNM, HPG, VCB..." style="font-size:16px;font-weight:700;color:var(--accent)">
+        <input id="symbol" value="VNM" placeholder="VNM, HPG, VCB..." style="font-size:15px;font-weight:700;color:var(--accent)">
       </div>
       <div class="row2">
-        <div class="field">
-          <label>Từ ngày</label>
-          <input id="start_date" type="date" value="2024-01-01">
-        </div>
+        <div class="field"><label>Từ ngày</label><input id="start_date" type="date" value="2024-01-01"></div>
         <div class="field">
           <label>Khung tham chiếu</label>
-          <select id="tf_ref">
-            <option value="1W" selected>Tuần (1W)</option>
-            <option value="1D">Ngày (1D)</option>
-          </select>
+          <select id="tf_ref"><option value="1W" selected>Tuần (1W)</option><option value="1D">Ngày (1D)</option></select>
         </div>
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-title">📊 Xu hướng</div>
-      <div class="field">
-        <label>Độ nhạy swing (2–20)</label>
-        <input id="swing_len" type="number" value="5" min="2" max="20">
-      </div>
+    <div class="sec">
+      <div class="sec-title">📊 Xu hướng</div>
+      <div class="field"><label>Độ nhạy swing (2–20)</label><input id="swing_len" type="number" value="5" min="2" max="20"></div>
     </div>
 
-    <div class="section">
-      <div class="section-title">🎯 Vùng KC/HT</div>
+    <div class="sec">
+      <div class="sec-title">🎯 Vùng KC/HT</div>
       <div class="row2">
-        <div class="field">
-          <label>Lookback (nến)</label>
-          <input id="zone_len" type="number" value="20" min="5" max="200">
-        </div>
-        <div class="field">
-          <label>Độ rộng (x ATR)</label>
-          <input id="zone_atr_mult" type="number" value="0.5" min="0.1" max="2" step="0.1">
-        </div>
+        <div class="field"><label>Lookback (nến)</label><input id="zone_len" type="number" value="20" min="5" max="200"></div>
+        <div class="field"><label>Độ rộng (x ATR)</label><input id="zone_atr_mult" type="number" value="0.5" min="0.1" max="2" step="0.1"></div>
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-title">🕯️ Nến đảo chiều</div>
+    <div class="sec">
+      <div class="sec-title">🕯️ Nến đảo chiều</div>
       <div class="row2">
-        <div class="field">
-          <label>Tỷ lệ thân</label>
-          <input id="body_ratio" type="number" value="0.60" min="0.4" max="0.9" step="0.05">
-        </div>
-        <div class="field">
-          <label>Tỷ lệ râu</label>
-          <input id="wick_ratio" type="number" value="0.50" min="0.3" max="0.8" step="0.05">
-        </div>
+        <div class="field"><label>Tỷ lệ thân</label><input id="body_ratio" type="number" value="0.60" min="0.4" max="0.9" step="0.05"></div>
+        <div class="field"><label>Tỷ lệ râu</label><input id="wick_ratio" type="number" value="0.50" min="0.3" max="0.8" step="0.05"></div>
       </div>
-      <div class="field">
-        <label>Độ nhạy ATR</label>
-        <input id="atr_mult" type="number" value="0.6" min="0.2" max="3" step="0.1">
-      </div>
-      <div class="checkbox-row">
-        <input id="use_volume" type="checkbox" checked>
-        <label for="use_volume">Lọc Volume</label>
-        <input id="vol_ma_len" type="number" value="20" min="5" max="50" style="width:60px;margin-left:auto">
-      </div>
-      <div class="checkbox-row">
-        <input id="use_rsi_div" type="checkbox" checked>
-        <label for="use_rsi_div">Phân kỳ RSI ẩn</label>
-        <input id="rsi_len" type="number" value="14" min="5" max="30" style="width:60px;margin-left:auto">
-      </div>
+      <div class="field"><label>Độ nhạy ATR</label><input id="atr_mult" type="number" value="0.6" min="0.2" max="3" step="0.1"></div>
+      <div class="cbrow"><input id="use_volume" type="checkbox" checked><label for="use_volume">Lọc Volume</label><input id="vol_ma_len" type="number" value="20" min="5" max="50"></div>
+      <div class="cbrow"><input id="use_rsi_div" type="checkbox" checked><label for="use_rsi_div">Phân kỳ RSI ẩn</label><input id="rsi_len" type="number" value="14" min="5" max="30"></div>
     </div>
 
-    <div class="section">
-      <div class="section-title">💰 Quản lý vốn</div>
-      <div class="field">
-        <label>Vốn tài khoản (₫)</label>
-        <input id="account" type="number" value="100000000" step="1000000">
-      </div>
+    <div class="sec">
+      <div class="sec-title">💰 Quản lý vốn</div>
+      <div class="field"><label>Vốn tài khoản (₫)</label><input id="account" type="number" value="100000000" step="10000000" placeholder="vd: 100000000"></div>
       <div class="row2">
-        <div class="field">
-          <label>Rủi ro/lệnh (%)</label>
-          <input id="risk_pct" type="number" value="2.0" min="0.1" max="5" step="0.1">
-        </div>
-        <div class="field">
-          <label>Stoploss (%)</label>
-          <input id="sl_pct" type="number" value="2.0" min="0.3" max="20" step="0.1">
-        </div>
+        <div class="field"><label>Rủi ro/lệnh (%)</label><input id="risk_pct" type="number" value="2.0" min="0.1" max="5" step="0.1"></div>
+        <div class="field"><label>Stoploss (%)</label><input id="sl_pct" type="number" value="2.0" min="0.3" max="20" step="0.1"></div>
       </div>
-      <div class="field">
-        <label>Giới hạn lỗ tháng (%)</label>
-        <input id="monthly_loss" type="number" value="6.0" min="1" max="20" step="0.5">
-      </div>
+      <div class="field"><label>Giới hạn lỗ tháng (%)</label><input id="monthly_loss" type="number" value="6.0" min="1" max="20" step="0.5"></div>
     </div>
 
-    <div class="section">
-      <button class="btn-run" id="btnRun" onclick="runAnalysis()">▶ PHÂN TÍCH</button>
+    <div class="sec" style="border-bottom:none">
+      <button class="btn" id="btnRun" onclick="run()">▶ PHÂN TÍCH</button>
     </div>
-
   </aside>
 
   <!-- MAIN -->
   <main class="main">
-
     <!-- Score bar -->
-    <div class="score-bar" id="scoreBar">
-      <div class="cond-cell" id="c1"><div class="cond-label">ĐIỀU KIỆN 1</div><div class="cond-icon">⬜</div><div class="cond-txt">Xu hướng rõ</div></div>
-      <div class="cond-cell" id="c2"><div class="cond-label">ĐIỀU KIỆN 2</div><div class="cond-icon">⬜</div><div class="cond-txt">Tại KC/HT</div></div>
-      <div class="cond-cell" id="c3"><div class="cond-label">ĐIỀU KIỆN 3</div><div class="cond-icon">⬜</div><div class="cond-txt">Nến đảo chiều</div></div>
-      <div class="cond-cell" id="c4"><div class="cond-label">ĐIỀU KIỆN 4</div><div class="cond-icon">⬜</div><div class="cond-txt">Quản lý vốn</div></div>
-      <div class="action-cell">
-        <div class="action-score" id="actionScore" style="color:var(--muted)">—</div>
-        <div class="action-label" id="actionLabel" style="color:var(--muted)">Chưa phân tích</div>
-        <div class="action-dir"  id="actionDir">Nhập mã và bấm Phân Tích</div>
+    <div class="score-bar">
+      <div class="cond" id="c1"><div class="cond-lbl">ĐIỀU KIỆN 1</div><div class="cond-ico">⬜</div><div class="cond-txt">Xu hướng rõ</div></div>
+      <div class="cond" id="c2"><div class="cond-lbl">ĐIỀU KIỆN 2</div><div class="cond-ico">⬜</div><div class="cond-txt">Tại KC/HT</div></div>
+      <div class="cond" id="c3"><div class="cond-lbl">ĐIỀU KIỆN 3</div><div class="cond-ico">⬜</div><div class="cond-txt">Nến đảo chiều</div></div>
+      <div class="cond" id="c4"><div class="cond-lbl">ĐIỀU KIỆN 4</div><div class="cond-ico">⬜</div><div class="cond-txt">Quản lý vốn</div></div>
+      <div class="action">
+        <div class="a-score" id="aScore" style="color:var(--muted)">—</div>
+        <div class="a-label" id="aLabel" style="color:var(--muted)">Chưa phân tích</div>
+        <div class="a-dir"   id="aDir">Nhập mã → Phân Tích</div>
       </div>
     </div>
 
     <!-- Chart -->
-    <div class="chart-wrap" style="flex:1;min-height:0;position:relative;">
+    <div class="chart-area">
       <div id="overlay" class="overlay hidden">
         <div class="spinner"></div>
-        <div class="loading-txt" id="loadingTxt">Đang lấy dữ liệu...</div>
+        <div class="load-txt" id="loadTxt">Đang lấy dữ liệu...</div>
       </div>
       <div id="welcome" class="welcome">
-        <div class="welcome-icon">📈</div>
-        <div class="action-label" style="color:var(--accent)">UG Checklist v2</div>
-        <div class="welcome-txt">Nhập mã cổ phiếu bên trái và bấm ▶ Phân Tích</div>
-        <div style="margin-top:8px;font-size:11px;color:var(--muted);font-family:var(--mono)">
-          Mã CK phổ biến: VNM · HPG · VCB · FPT · VIC · MWG · SSI
-        </div>
+        <div class="w-icon">📈</div>
+        <div style="color:var(--accent);font-weight:700">UG Checklist v2</div>
+        <div class="w-txt">Nhập mã cổ phiếu bên trái → bấm Phân Tích</div>
       </div>
-      <div id="chart" style="display:none;width:100%;"></div>
+      <div id="chart" style="display:none;width:100%;height:100%"></div>
     </div>
 
-    <!-- Bottom stats -->
-    <div class="bottom" id="bottomStats" style="display:none">
-      <div class="stat"><span>Giá:</span><b id="bClose">—</b></div>
-      <div class="stat"><span>RSI:</span><b id="bRsi">—</b></div>
-      <div class="stat"><span>RSI signal:</span><b id="bRsiSig">—</b></div>
-      <div class="stat"><span>Lỗ tối đa/tháng:</span><b id="bMonthly">—</b></div>
-      <div class="stat"><span>Ngày:</span><b id="bDate">—</b></div>
+    <!-- Bottom: stats + signals -->
+    <div class="bottom-bar" id="bottomBar" style="display:none">
+      <div class="stats-col">
+        <div class="stat"><span>Mã:</span><b id="bSym" style="color:var(--accent)">—</b></div>
+        <div class="stat"><span>Giá:</span><b id="bClose">—</b></div>
+        <div class="stat"><span>RSI:</span><b id="bRsi">—</b> <span style="margin-left:6px"></span><b id="bRsiSig" style="color:var(--muted)">—</b></div>
+        <div class="stat"><span>Lỗ tối đa/tháng:</span><b id="bMonthly">—</b></div>
+        <div class="stat"><span>Ngày:</span><b id="bDate">—</b></div>
+      </div>
+      <div class="sigs-col">
+        <div class="sigs-title">5 tín hiệu gần nhất</div>
+        <table class="sigs-tbl">
+          <thead><tr><th>Ngày</th><th>Giá</th><th>Điểm</th><th>Tín hiệu</th><th>Action</th></tr></thead>
+          <tbody id="sigsTbody"></tbody>
+        </table>
+      </div>
     </div>
-
-    <!-- Signals -->
-    <div class="signals-wrap" id="signalsWrap" style="display:none">
-      <div class="signals-title">10 tín hiệu gần nhất</div>
-      <table class="signals-table">
-        <thead><tr>
-          <th>Ngày</th><th>Giá</th><th>Điểm</th><th>Tín hiệu</th><th>Action</th>
-        </tr></thead>
-        <tbody id="signalsTbody"></tbody>
-      </table>
-    </div>
-
   </main>
 </div>
 
 <script>
-const SCORE_COLORS = ["#ff1744","#ff1744","#ff6d00","#ffa000","#00c853"];
-const SCORE_LABELS = ["🔴 ĐỨNG NGOÀI","🔴 ĐỨNG NGOÀI","🟠 CHỜ THÊM","🟡 THEO DÕI SÁT","🟢 VÀO LỆNH"];
+const SC = ["#ff1744","#ff1744","#ff6d00","#ffa000","#00c853"];
 
-function setLoading(on, txt="Đang phân tích...") {
-  document.getElementById("overlay").classList.toggle("hidden", !on);
-  document.getElementById("loadingTxt").textContent = txt;
-  document.getElementById("btnRun").disabled = on;
+function loading(on, txt="Đang phân tích..."){
+  document.getElementById("overlay").classList.toggle("hidden",!on);
+  document.getElementById("loadTxt").textContent=txt;
+  document.getElementById("btnRun").disabled=on;
 }
 
-function updateCond(id, ok, icon, txt) {
-  const el = document.getElementById(id);
-  el.className = "cond-cell " + (ok ? "ok" : "fail");
-  el.innerHTML = `<div class="cond-label">${id.toUpperCase().replace("C","ĐIỀU KIỆN ")}</div>
-    <div class="cond-icon">${ok ? "✅" : "❌"}</div>
-    <div class="cond-txt">${txt}</div>`;
+function setCond(id, ok, lbl, txt){
+  const el=document.getElementById(id);
+  el.className="cond "+(ok?"ok":"fail");
+  const n=id.replace("c","");
+  el.innerHTML=`<div class="cond-lbl">ĐIỀU KIỆN ${n}</div><div class="cond-ico">${ok?"✅":"❌"}</div><div class="cond-txt">${txt}</div>`;
 }
 
-async function runAnalysis() {
-  const symbol = document.getElementById("symbol").value.trim().toUpperCase();
-  if (!symbol) { alert("Vui lòng nhập mã cổ phiếu!"); return; }
+async function run(){
+  const sym=document.getElementById("symbol").value.trim().toUpperCase();
+  if(!sym){alert("Vui lòng nhập mã cổ phiếu!");return;}
+  loading(true,`Đang lấy dữ liệu ${sym}...`);
+  document.getElementById("welcome").style.display="none";
 
-  setLoading(true, `Đang lấy dữ liệu ${symbol}...`);
-  document.getElementById("welcome").style.display = "none";
-
-  const payload = {
-    symbol,
-    start_date:    document.getElementById("start_date").value,
-    tf_ref:        document.getElementById("tf_ref").value,
-    swing_len:     +document.getElementById("swing_len").value,
-    zone_len:      +document.getElementById("zone_len").value,
-    zone_atr_mult: +document.getElementById("zone_atr_mult").value,
-    body_ratio:    +document.getElementById("body_ratio").value,
-    wick_ratio:    +document.getElementById("wick_ratio").value,
-    atr_mult:      +document.getElementById("atr_mult").value,
-    use_volume:    document.getElementById("use_volume").checked,
-    vol_ma_len:    +document.getElementById("vol_ma_len").value,
-    use_rsi_div:   document.getElementById("use_rsi_div").checked,
-    rsi_len:       +document.getElementById("rsi_len").value,
-    account:       +document.getElementById("account").value,
-    risk_pct:      +document.getElementById("risk_pct").value,
-    sl_pct:        +document.getElementById("sl_pct").value,
-    monthly_loss:  +document.getElementById("monthly_loss").value,
+  const p={
+    symbol:sym,
+    start_date:document.getElementById("start_date").value,
+    tf_ref:document.getElementById("tf_ref").value,
+    swing_len:+document.getElementById("swing_len").value,
+    zone_len:+document.getElementById("zone_len").value,
+    zone_atr_mult:+document.getElementById("zone_atr_mult").value,
+    body_ratio:+document.getElementById("body_ratio").value,
+    wick_ratio:+document.getElementById("wick_ratio").value,
+    atr_mult:+document.getElementById("atr_mult").value,
+    use_volume:document.getElementById("use_volume").checked,
+    vol_ma_len:+document.getElementById("vol_ma_len").value,
+    use_rsi_div:document.getElementById("use_rsi_div").checked,
+    rsi_len:+document.getElementById("rsi_len").value,
+    account:+document.getElementById("account").value,
+    risk_pct:+document.getElementById("risk_pct").value,
+    sl_pct:+document.getElementById("sl_pct").value,
+    monthly_loss:+document.getElementById("monthly_loss").value,
   };
 
-  try {
-    const res  = await fetch("/analyze", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)});
-    const data = await res.json();
-
-    if (data.error) {
-      setLoading(false);
-      alert("❌ Lỗi: " + data.error);
-      return;
-    }
-
-    renderChart(data.chart, symbol);
-    renderSummary(data.summary);
-    renderSignals(data.signals);
-    setLoading(false);
-
-  } catch(e) {
-    setLoading(false);
-    alert("❌ Không kết nối được server: " + e.message);
-  }
+  try{
+    const res=await fetch("/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)});
+    const data=await res.json();
+    if(data.error){loading(false);alert("❌ "+data.error);return;}
+    drawChart(data.chart,sym);
+    showSummary(data.summary);
+    showSignals(data.signals);
+    loading(false);
+  }catch(e){loading(false);alert("❌ Lỗi kết nối: "+e.message);}
 }
 
-function renderSummary(s) {
-  const score = s.score;
-  const col   = SCORE_COLORS[score];
-
-  updateCond("c1", s.cond1, s.cond1 ? "✅":"❌", s.cond1_txt);
-  updateCond("c2", s.cond2, s.cond2 ? "✅":"❌", s.cond2_txt);
-  updateCond("c3", s.cond3, s.cond3 ? "✅":"❌", s.cond3_txt);
-  updateCond("c4", s.cond4, s.cond4 ? "✅":"❌", s.cond4_txt);
-
-  document.getElementById("actionScore").textContent = score + "/4";
-  document.getElementById("actionScore").style.color = col;
-  document.getElementById("actionLabel").textContent = s.action;
-  document.getElementById("actionLabel").style.color = col;
-  document.getElementById("actionDir").textContent   = s.direction;
-
-  document.getElementById("bClose").textContent   = s.close + "₫";
-  document.getElementById("bRsi").textContent     = s.rsi;
-  document.getElementById("bRsiSig").textContent  = s.rsi_signal;
-  document.getElementById("bMonthly").textContent = s.monthly_loss_vnd + "₫";
-  document.getElementById("bDate").textContent    = s.date;
-
-  document.getElementById("bottomStats").style.display = "flex";
+function showSummary(s){
+  const col=SC[s.score];
+  setCond("c1",s.cond1,"1",s.cond1_txt);
+  setCond("c2",s.cond2,"2",s.cond2_txt);
+  setCond("c3",s.cond3,"3",s.cond3_txt);
+  setCond("c4",s.cond4,"4",s.cond4_txt);
+  document.getElementById("aScore").textContent=s.score+"/4";
+  document.getElementById("aScore").style.color=col;
+  document.getElementById("aLabel").textContent=s.action;
+  document.getElementById("aLabel").style.color=col;
+  document.getElementById("aDir").textContent=s.direction;
+  document.getElementById("bSym").textContent=s.symbol;
+  document.getElementById("bClose").textContent=s.close+"₫";
+  document.getElementById("bRsi").textContent=s.rsi;
+  document.getElementById("bRsiSig").textContent=s.rsi_signal;
+  document.getElementById("bMonthly").textContent=s.monthly_loss_vnd+"₫";
+  document.getElementById("bDate").textContent=s.date;
+  document.getElementById("bottomBar").style.display="flex";
 }
 
-function renderSignals(signals) {
-  const tbody = document.getElementById("signalsTbody");
-  const SCOLS = ["","","#ff6d00","#ffa000","#00c853"];
-  tbody.innerHTML = signals.map(r => `
+function showSignals(sigs){
+  const SC2=["","","#ff6d00","#ffa000","#00c853"];
+  document.getElementById("sigsTbody").innerHTML=sigs.map(r=>`
     <tr>
       <td style="color:var(--muted)">${r.date}</td>
       <td style="font-weight:600">${r.close}₫</td>
-      <td><span style="color:${SCOLS[r.score]};font-weight:700">${r.score}/4</span></td>
+      <td><span style="color:${SC2[r.score]};font-weight:700">${r.score}/4</span></td>
       <td>${r.signal}</td>
       <td>${r.action}</td>
     </tr>`).join("");
-  document.getElementById("signalsWrap").style.display = "block";
 }
 
-function renderChart(c, symbol) {
-  const el = document.getElementById("chart");
-  el.style.display = "block";
+function drawChart(c, sym){
+  const el=document.getElementById("chart");
+  el.style.display="block";
 
-  const candle = {
-    type: "candlestick", name: symbol,
-    x: c.dates, open: c.open, high: c.high, low: c.low, close: c.close,
-    increasing: {line:{color:"#00e676"}, fillcolor:"#00e676"},
-    decreasing: {line:{color:"#ff1744"}, fillcolor:"#ff1744"},
-    xaxis:"x", yaxis:"y"
-  };
+  const candle={type:"candlestick",name:sym,
+    x:c.dates,open:c.open,high:c.high,low:c.low,close:c.close,
+    increasing:{line:{color:"#00e676"},fillcolor:"#00e676"},
+    decreasing:{line:{color:"#ff1744"},fillcolor:"#ff1744"},
+    xaxis:"x",yaxis:"y"};
 
-  const resistTop = { type:"scatter", x:c.dates, y:c.resist_top, mode:"lines",
-    line:{color:"rgba(255,23,68,0.25)",width:1}, name:"KC trên", xaxis:"x", yaxis:"y", showlegend:true };
-  const resistBot = { type:"scatter", x:c.dates, y:c.resist_bot, mode:"lines",
-    line:{color:"rgba(255,23,68,0.25)",width:1}, fill:"tonexty", fillcolor:"rgba(255,23,68,0.07)",
-    name:"KC dưới", xaxis:"x", yaxis:"y", showlegend:true };
-  const suppTop = { type:"scatter", x:c.dates, y:c.support_top, mode:"lines",
-    line:{color:"rgba(0,230,118,0.25)",width:1}, name:"HT trên", xaxis:"x", yaxis:"y", showlegend:true };
-  const suppBot = { type:"scatter", x:c.dates, y:c.support_bot, mode:"lines",
-    line:{color:"rgba(0,230,118,0.25)",width:1}, fill:"tonexty", fillcolor:"rgba(0,230,118,0.07)",
-    name:"HT dưới", xaxis:"x", yaxis:"y", showlegend:true };
+  const rTop={type:"scatter",x:c.dates,y:c.resist_top,mode:"lines",
+    line:{color:"rgba(255,23,68,0.2)",width:1},name:"KC trên",xaxis:"x",yaxis:"y"};
+  const rBot={type:"scatter",x:c.dates,y:c.resist_bot,mode:"lines",
+    line:{color:"rgba(255,23,68,0.2)",width:1},fill:"tonexty",fillcolor:"rgba(255,23,68,0.07)",
+    name:"KC dưới",xaxis:"x",yaxis:"y"};
+  const sTop={type:"scatter",x:c.dates,y:c.support_top,mode:"lines",
+    line:{color:"rgba(0,230,118,0.2)",width:1},name:"HT trên",xaxis:"x",yaxis:"y"};
+  const sBot={type:"scatter",x:c.dates,y:c.support_bot,mode:"lines",
+    line:{color:"rgba(0,230,118,0.2)",width:1},fill:"tonexty",fillcolor:"rgba(0,230,118,0.07)",
+    name:"HT dưới",xaxis:"x",yaxis:"y"};
 
-  // Tín hiệu 4/4
-  const bull4 = c.bull_4.length ? {
-    type:"scatter", mode:"markers+text", name:"✅ VÀO LỆNH LONG",
-    x:c.bull_4.map(r=>r.date), y:c.bull_4.map(r=>r.low*0.985),
-    marker:{symbol:"triangle-up",size:14,color:"#00c853"},
-    text: c.bull_4.map(()=>"▲"), textposition:"bottom center",
-    textfont:{color:"#00c853",size:10}, xaxis:"x", yaxis:"y"
-  } : null;
-  const bear4 = c.bear_4.length ? {
-    type:"scatter", mode:"markers+text", name:"✅ VÀO LỆNH SHORT",
-    x:c.bear_4.map(r=>r.date), y:c.bear_4.map(r=>r.high*1.015),
-    marker:{symbol:"triangle-down",size:14,color:"#d50000"},
-    text: c.bear_4.map(()=>"▼"), textposition:"top center",
-    textfont:{color:"#d50000",size:10}, xaxis:"x", yaxis:"y"
-  } : null;
+  const b4=c.bull_4.length?{type:"scatter",mode:"markers+text",name:"✅ LONG",
+    x:c.bull_4.map(r=>r.date),y:c.bull_4.map(r=>r.low*.984),
+    marker:{symbol:"triangle-up",size:13,color:"#00c853"},
+    text:c.bull_4.map(()=>"▲"),textposition:"bottom center",
+    textfont:{color:"#00c853",size:9},xaxis:"x",yaxis:"y"}:null;
+  const be4=c.bear_4.length?{type:"scatter",mode:"markers+text",name:"✅ SHORT",
+    x:c.bear_4.map(r=>r.date),y:c.bear_4.map(r=>r.high*1.016),
+    marker:{symbol:"triangle-down",size:13,color:"#d50000"},
+    text:c.bear_4.map(()=>"▼"),textposition:"top center",
+    textfont:{color:"#d50000",size:9},xaxis:"x",yaxis:"y"}:null;
+  const b3=c.bull_3.length?{type:"scatter",mode:"markers",name:"🟡 Theo dõi LONG",
+    x:c.bull_3.map(r=>r.date),y:c.bull_3.map(r=>r.low*.991),
+    marker:{symbol:"triangle-up",size:9,color:"#ffa000"},xaxis:"x",yaxis:"y"}:null;
+  const be3=c.bear_3.length?{type:"scatter",mode:"markers",name:"🟡 Theo dõi SHORT",
+    x:c.bear_3.map(r=>r.date),y:c.bear_3.map(r=>r.high*1.009),
+    marker:{symbol:"triangle-down",size:9,color:"#ff6d00"},xaxis:"x",yaxis:"y"}:null;
 
-  // Tín hiệu 3/4
-  const bull3 = c.bull_3.length ? {
-    type:"scatter", mode:"markers", name:"🟡 Theo dõi LONG",
-    x:c.bull_3.map(r=>r.date), y:c.bull_3.map(r=>r.low*0.991),
-    marker:{symbol:"triangle-up",size:9,color:"#ffa000"},
-    xaxis:"x", yaxis:"y"
-  } : null;
-  const bear3 = c.bear_3.length ? {
-    type:"scatter", mode:"markers", name:"🟡 Theo dõi SHORT",
-    x:c.bear_3.map(r=>r.date), y:c.bear_3.map(r=>r.high*1.009),
-    marker:{symbol:"triangle-down",size:9,color:"#ff6d00"},
-    xaxis:"x", yaxis:"y"
-  } : null;
+  const volColors=c.close.map((cl,i)=>cl>=c.open[i]?"#00e676":"#ff1744");
+  const vol={type:"bar",name:"Khối lượng",x:c.dates,y:c.volume,
+    marker:{color:volColors,line:{width:0}},opacity:.75,xaxis:"x",yaxis:"y2"};
+  const volMa={type:"scatter",name:"MA Vol",mode:"lines",x:c.dates,y:c.vol_ma,
+    line:{color:"#ffa000",width:1.2,dash:"dot"},xaxis:"x",yaxis:"y2"};
 
-  // Volume bars
-  const volColors = c.close.map((cl,i) => cl >= c.open[i] ? "#00e676" : "#ff1744");
-  const vol = {
-    type:"bar", name:"Khối lượng",
-    x:c.dates, y:c.volume,
-    marker:{color:volColors, line:{width:0}},
-    opacity:0.75, xaxis:"x", yaxis:"y2"
-  };
-  const volMa = {
-    type:"scatter", name:"MA Vol", mode:"lines",
-    x:c.dates, y:c.vol_ma,
-    line:{color:"#ffa000",width:1.5,dash:"dot"},
-    xaxis:"x", yaxis:"y2"
-  };
+  const traces=[candle,rTop,rBot,sTop,sBot,vol,volMa,b4,be4,b3,be3].filter(Boolean);
 
-  const traces = [candle, resistTop, resistBot, suppTop, suppBot, vol, volMa,
-                  bull4, bear4, bull3, bear3].filter(Boolean);
-
-  const layout = {
-    paper_bgcolor:"#080c10",
-    plot_bgcolor:"#0d1117",
-    font:{color:"#8b949e", family:"JetBrains Mono, monospace", size:11},
-    margin:{t:10,r:10,b:10,l:60},
-    xaxis:{
-      rangeslider:{visible:false},
-      gridcolor:"#21262d", linecolor:"#21262d",
-      tickfont:{size:10}
-    },
-    yaxis:{
-      domain:[0.3,1], gridcolor:"#21262d", linecolor:"#21262d",
-      tickfont:{size:10}
-    },
-    yaxis2:{
-      domain:[0,0.27], gridcolor:"#21262d", linecolor:"#21262d",
-      tickfont:{size:10}, title:{text:"KL", font:{size:10}},
-    },
-    legend:{
-      orientation:"h", x:0, y:1.02, bgcolor:"rgba(0,0,0,0)",
-      font:{size:10}, xanchor:"left"
-    },
+  const layout={
+    paper_bgcolor:"#080c10",plot_bgcolor:"#0d1117",
+    font:{color:"#8b949e",family:"JetBrains Mono,monospace",size:10},
+    margin:{t:8,r:8,b:8,l:55},
+    xaxis:{rangeslider:{visible:false},gridcolor:"#21262d",linecolor:"#21262d",tickfont:{size:9}},
+    yaxis:{domain:[0.28,1],gridcolor:"#21262d",linecolor:"#21262d",tickfont:{size:9}},
+    yaxis2:{domain:[0,0.25],gridcolor:"#21262d",linecolor:"#21262d",tickfont:{size:9},
+      title:{text:"KL",font:{size:9}}},
+    legend:{orientation:"h",x:0,y:1.01,bgcolor:"rgba(0,0,0,0)",font:{size:9},xanchor:"left"},
     hovermode:"x unified",
-    hoverlabel:{bgcolor:"#161b22", bordercolor:"#21262d", font:{size:11}},
+    hoverlabel:{bgcolor:"#161b22",bordercolor:"#21262d",font:{size:10}},
   };
 
-  Plotly.react("chart", traces, layout, {responsive:true, displayModeBar:false});
-  window._chartRendered = true;
+  Plotly.react("chart",traces,layout,{responsive:true,displayModeBar:false});
 }
 
-// BUG8 FIX: chart tự resize theo container
-const chartWrap = document.querySelector(".chart-wrap");
-const resizeObserver = new ResizeObserver(() => {
-  const h = chartWrap.offsetHeight;
-  if (h > 0) {
-    document.getElementById("chart").style.height = h + "px";
-    if (window._chartRendered) Plotly.relayout("chart", {height: h});
-  }
-});
-resizeObserver.observe(chartWrap);
-
-// Enter để chạy
-document.addEventListener("keydown", e => {
-  if (e.key === "Enter" && document.activeElement.id === "symbol") runAnalysis();
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&document.activeElement.id==="symbol") run();
 });
 </script>
 </body>
