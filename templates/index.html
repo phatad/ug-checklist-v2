@@ -15,6 +15,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans)}
+.sidebar{overflow-y:auto!important}
 
 /* Header */
 .hdr{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface);height:48px}
@@ -140,7 +141,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
     <div class="sec">
       <div class="sec-title">💰 Quản lý vốn</div>
-      <div class="field"><label>Vốn tài khoản (₫)</label><input id="account" type="number" value="100000000" step="10000000" placeholder="vd: 100000000"></div>
+      <div class="field"><label>Vốn tài khoản (₫)</label><input id="account" type="number" value="100000000" step="10000000" min="1000000" placeholder="vd: 100000000"></div>
       <div class="row2">
         <div class="field"><label>Rủi ro/lệnh (%)</label><input id="risk_pct" type="number" value="2.0" min="0.1" max="5" step="0.1"></div>
         <div class="field"><label>Stoploss (%)</label><input id="sl_pct" type="number" value="2.0" min="0.3" max="20" step="0.1"></div>
@@ -148,7 +149,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       <div class="field"><label>Giới hạn lỗ tháng (%)</label><input id="monthly_loss" type="number" value="6.0" min="1" max="20" step="0.5"></div>
     </div>
 
-    <div class="sec" style="border-bottom:none">
+    <div class="sec" style="border-bottom:none;position:sticky;bottom:0;background:var(--surface);z-index:2">
       <button class="btn" id="btnRun" onclick="run()">▶ PHÂN TÍCH</button>
     </div>
   </aside>
@@ -221,6 +222,12 @@ function setCond(id, ok, lbl, txt){
 async function run(){
   const sym=document.getElementById("symbol").value.trim().toUpperCase();
   if(!sym){alert("Vui lòng nhập mã cổ phiếu!");return;}
+  const acc=+document.getElementById("account").value;
+  if(!acc||acc<=0){alert("Vốn tài khoản phải lớn hơn 0!");document.getElementById("account").focus();return;}
+  const riskp=+document.getElementById("risk_pct").value;
+  if(riskp<=0||riskp>5){alert("Rủi ro/lệnh phải từ 0.1% đến 5%!");return;}
+  const slp=+document.getElementById("sl_pct").value;
+  if(slp<0.3||slp>20){alert("Stoploss phải từ 0.3% đến 20%!");return;}
   loading(true,`Đang lấy dữ liệu ${sym}...`);
   document.getElementById("welcome").style.display="none";
 
@@ -346,7 +353,13 @@ function drawChart(c, sym){
     hoverlabel:{bgcolor:"#161b22",bordercolor:"#21262d",font:{size:10}},
   };
 
-  Plotly.react("chart",traces,layout,{responsive:true,displayModeBar:false});
+  Plotly.react("chart",traces,layout,{
+    responsive:true,
+    displayModeBar:true,
+    displaylogo:false,
+    scrollZoom:true,
+    modeBarButtonsToKeep:['zoom2d','pan2d','zoomIn2d','zoomOut2d','resetScale2d']
+  });
 }
 
 document.addEventListener("keydown",e=>{
