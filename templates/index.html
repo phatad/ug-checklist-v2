@@ -169,8 +169,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       </div>
     </div>
 
-    <!-- Chart -->
-    <div class="chart-area">
+    <!-- Chart area với resizable -->
+    <div class="chart-area" style="position:relative">
       <div id="overlay" class="overlay hidden">
         <div class="spinner"></div>
         <div class="load-txt" id="loadTxt">Đang lấy dữ liệu...</div>
@@ -180,24 +180,28 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
         <div style="color:var(--accent);font-weight:700">UG Checklist v2</div>
         <div class="w-txt">Nhập mã cổ phiếu bên trái → bấm Phân Tích</div>
       </div>
-      <div id="chart" style="display:none;width:100%;height:100%"></div>
-    </div>
-
-    <!-- Bottom: stats + signals -->
-    <div class="bottom-bar" id="bottomBar" style="display:none">
-      <div class="stats-col">
-        <div class="stat"><span>Mã:</span><b id="bSym" style="color:var(--accent)">—</b></div>
-        <div class="stat"><span>Giá:</span><b id="bClose">—</b></div>
-        <div class="stat"><span>RSI:</span><b id="bRsi">—</b> <span style="margin-left:6px"></span><b id="bRsiSig" style="color:var(--muted)">—</b></div>
-        <div class="stat"><span>Lỗ tối đa/tháng:</span><b id="bMonthly">—</b></div>
-        <div class="stat"><span>Ngày:</span><b id="bDate">—</b></div>
-      </div>
-      <div class="sigs-col">
-        <div class="sigs-title">5 tín hiệu gần nhất</div>
-        <table class="sigs-tbl">
-          <thead><tr><th>Ngày</th><th>Giá</th><th>Điểm</th><th>Tín hiệu</th><th>Action</th></tr></thead>
-          <tbody id="sigsTbody"></tbody>
-        </table>
+      <div id="chartArea" style="display:none;width:100%;height:100%;flex-direction:column">
+        <div id="chartCandle" style="flex:1;min-height:60px"></div>
+        <div id="chartVol" style="height:90px;flex-shrink:0"></div>
+        <div id="divider" style="height:7px;background:#21262d;cursor:row-resize;flex-shrink:0;display:flex;align-items:center;justify-content:center" title="Kéo để điều chỉnh">
+          <div style="width:36px;height:2px;background:#444;border-radius:2px"></div>
+        </div>
+        <div id="bottomBar" style="height:125px;display:flex;flex-shrink:0;overflow:hidden;border-top:1px solid var(--border)">
+          <div class="stats-col">
+            <div class="stat"><span>Mã:</span><b id="bSym" style="color:var(--accent)">—</b></div>
+            <div class="stat"><span>Giá:</span><b id="bClose">—</b></div>
+            <div class="stat"><span>RSI:</span><b id="bRsi">—</b> <b id="bRsiSig" style="color:var(--muted);margin-left:4px">—</b></div>
+            <div class="stat"><span>Lỗ tối đa/tháng:</span><b id="bMonthly">—</b></div>
+            <div class="stat"><span>Ngày:</span><b id="bDate">—</b></div>
+          </div>
+          <div class="sigs-col">
+            <div class="sigs-title">5 tín hiệu gần nhất</div>
+            <table class="sigs-tbl">
+              <thead><tr><th>Ngày</th><th>Giá</th><th>Điểm</th><th>Tín hiệu</th><th>Action</th></tr></thead>
+              <tbody id="sigsTbody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </main>
@@ -279,7 +283,7 @@ function showSummary(s){
   document.getElementById("bRsiSig").textContent=s.rsi_signal;
   document.getElementById("bMonthly").textContent=s.monthly_loss_vnd+"₫";
   document.getElementById("bDate").textContent=s.date;
-  document.getElementById("bottomBar").style.display="flex";
+  document.getElementById("chartArea").style.display="flex";
 }
 
 function showSignals(sigs){
@@ -332,39 +336,96 @@ function drawChart(c, sym){
     x:c.bear_3.map(r=>r.date),y:c.bear_3.map(r=>r.high*1.009),
     marker:{symbol:"triangle-down",size:9,color:"#ff6d00"},xaxis:"x",yaxis:"y"}:null;
 
-  const volColors=c.close.map((cl,i)=>cl>=c.open[i]?"#00e676":"#ff1744");
-  const vol={type:"bar",name:"Khối lượng",x:c.dates,y:c.volume,
-    marker:{color:volColors,line:{width:0}},opacity:.75,xaxis:"x",yaxis:"y2"};
-  const volMa={type:"scatter",name:"MA Vol",mode:"lines",x:c.dates,y:c.vol_ma,
-    line:{color:"#ffa000",width:1.2,dash:"dot"},xaxis:"x",yaxis:"y2"};
+  // Volume: normalize về cùng scale với giá để vẽ chung 1 panel (bottom 20%)
+  const maxVol = Math.max(...c.volume.filter(v=>v!=null));
+  const priceMin = Math.min(...c.low.filter(v=>v!=null));
+  const priceMax = Math.max(...c.high.filter(v=>v!=null));
+  const volScale = (priceMax - priceMin) * 0.22;
+  const volNorm = c.volume.map(v => v != null ? priceMin + (v / maxVol) * volScale : null);
+  const volMaNorm = c.vol_ma.map(v => v != null ? priceMin + (v / maxVol) * volScale : null);
 
-  const traces=[candle,rTop,rBot,sTop,sBot,vol,volMa,b4,be4,b3,be3].filter(Boolean);
+  const volColors = c.close.map((cl,i) => cl >= c.open[i] ? "rgba(0,230,118,0.5)" : "rgba(255,23,68,0.5)");
+  const vol = {type:"bar", name:"Khối lượng", x:c.dates, y:volNorm,
+    marker:{color:volColors, line:{width:0}}, xaxis:"x", yaxis:"y",
+    hovertemplate: c.volume.map((v,i) => `Khối lượng: ${v!=null?Math.round(v/1000)+'K':'-'}<extra></extra>`)};
+  const volMa = {type:"scatter", name:"MA Vol", mode:"lines", x:c.dates, y:volMaNorm,
+    line:{color:"#ffa000", width:1, dash:"dot"}, xaxis:"x", yaxis:"y", hoverinfo:"skip"};
 
-  const layout={
-    paper_bgcolor:"#080c10",plot_bgcolor:"#0d1117",
-    font:{color:"#8b949e",family:"JetBrains Mono,monospace",size:10},
-    margin:{t:8,r:8,b:8,l:55},
-    xaxis:{rangeslider:{visible:false},gridcolor:"#21262d",linecolor:"#21262d",tickfont:{size:9}},
-    yaxis:{domain:[0.28,1],gridcolor:"#21262d",linecolor:"#21262d",tickfont:{size:9}},
-    yaxis2:{domain:[0,0.25],gridcolor:"#21262d",linecolor:"#21262d",tickfont:{size:9},
-      title:{text:"KL",font:{size:9}}},
-    legend:{orientation:"h",x:0,y:1.01,bgcolor:"rgba(0,0,0,0)",font:{size:9},xanchor:"left"},
+  // Chart nến
+  const tracesCandle = [candle,rTop,rBot,sTop,sBot,b4,be4,b3,be3].filter(Boolean);
+  const layoutCandle = {
+    paper_bgcolor:"#080c10", plot_bgcolor:"#0d1117",
+    font:{color:"#8b949e", family:"JetBrains Mono,monospace", size:10},
+    margin:{t:8,r:8,b:24,l:55},
+    xaxis:{rangeslider:{visible:false}, gridcolor:"#21262d", linecolor:"#21262d", tickfont:{size:9}},
+    yaxis:{gridcolor:"#21262d", linecolor:"#21262d", tickfont:{size:9}},
+    legend:{orientation:"h", x:0, y:1.02, bgcolor:"rgba(0,0,0,0)", font:{size:9}, xanchor:"left"},
     hovermode:"x unified",
-    hoverlabel:{bgcolor:"#161b22",bordercolor:"#21262d",font:{size:10}},
+    hoverlabel:{bgcolor:"#161b22", bordercolor:"#21262d", font:{size:10}},
   };
-
-  Plotly.react("chart",traces,layout,{
-    responsive:true,
-    displayModeBar:true,
-    displaylogo:false,
-    scrollZoom:true,
+  Plotly.react("chartCandle", tracesCandle, layoutCandle, {
+    responsive:true, displayModeBar:true, displaylogo:false, scrollZoom:true,
     modeBarButtonsToKeep:['zoom2d','pan2d','zoomIn2d','zoomOut2d','resetScale2d']
+  });
+
+  // Chart khối lượng — sync xaxis với chart nến
+  const volColors = c.close.map((cl,i) => cl >= c.open[i] ? "rgba(0,230,118,0.65)" : "rgba(255,23,68,0.65)");
+  const volTrace = {type:"bar", name:"Khối lượng", x:c.dates, y:c.volume,
+    marker:{color:volColors, line:{width:0}}, xaxis:"x", yaxis:"y"};
+  const volMaTrace = {type:"scatter", name:"MA Vol", mode:"lines", x:c.dates, y:c.vol_ma,
+    line:{color:"#ffa000", width:1.2, dash:"dot"}, xaxis:"x", yaxis:"y"};
+
+  const layoutVol = {
+    paper_bgcolor:"#080c10", plot_bgcolor:"#0d1117",
+    font:{color:"#8b949e", family:"JetBrains Mono,monospace", size:10},
+    margin:{t:4,r:8,b:24,l:55},
+    xaxis:{gridcolor:"#21262d", linecolor:"#21262d", tickfont:{size:9}},
+    yaxis:{gridcolor:"#21262d", linecolor:"#21262d", tickfont:{size:9}},
+    legend:{orientation:"h", x:0, y:1.05, bgcolor:"rgba(0,0,0,0)", font:{size:9}},
+    hovermode:"x unified",
+    hoverlabel:{bgcolor:"#161b22", bordercolor:"#21262d", font:{size:10}},
+  };
+  Plotly.react("chartVol", [volTrace, volMaTrace], layoutVol, {
+    responsive:true, displayModeBar:false, scrollZoom:true
+  });
+
+  // Sync zoom giữa 2 chart
+  document.getElementById("chartCandle").on("plotly_relayout", d => {
+    if (d["xaxis.range[0]"]) {
+      Plotly.relayout("chartVol", {"xaxis.range[0]": d["xaxis.range[0]"], "xaxis.range[1]": d["xaxis.range[1]"]});
+    } else if (d["xaxis.autorange"]) {
+      Plotly.relayout("chartVol", {"xaxis.autorange": true});
+    }
   });
 }
 
 document.addEventListener("keydown",e=>{
   if(e.key==="Enter"&&document.activeElement.id==="symbol") run();
 });
+
+// Resizable divider
+(function(){
+  const divider = document.getElementById("divider");
+  const bottomBar = document.getElementById("bottomBar");
+  if(!divider||!bottomBar) return;
+  let dragging=false, startY=0, startH=0;
+  divider.addEventListener("mousedown", e=>{
+    dragging=true; startY=e.clientY; startH=bottomBar.offsetHeight;
+    document.body.style.cursor="row-resize"; e.preventDefault();
+  });
+  document.addEventListener("mousemove", e=>{
+    if(!dragging) return;
+    const diff = startY - e.clientY;
+    const newH = Math.min(220, Math.max(36, startH + diff));
+    bottomBar.style.height = newH+"px";
+  });
+  document.addEventListener("mouseup", ()=>{
+    dragging=false; document.body.style.cursor="";
+    divider.style.background="#21262d";
+  });
+  divider.addEventListener("mouseenter",()=>{ divider.style.background="#333"; });
+  divider.addEventListener("mouseleave",()=>{ if(!dragging) divider.style.background="#21262d"; });
+})();
 </script>
 </body>
 </html>
