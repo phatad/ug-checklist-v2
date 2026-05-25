@@ -73,6 +73,26 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:10px;font-family:var(--mono)}
 .w-icon{font-size:40px}
 .w-txt{color:var(--muted);font-size:12px}
+
+/* ── Mobile responsive ───────────────────────────────── */
+.menu-btn{display:none;background:none;border:none;color:var(--accent);font-size:22px;cursor:pointer;padding:4px 8px}
+.overlay-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+.overlay-bg.show{display:block}
+@media(max-width:768px){
+  .menu-btn{display:block}
+  .dot{display:none}
+  .layout{grid-template-columns:1fr}
+  .sidebar{position:fixed;top:48px;left:0;bottom:0;width:80vw;max-width:300px;z-index:100;transform:translateX(-100%);transition:transform .25s;box-shadow:4px 0 20px rgba(0,0,0,.5)}
+  .sidebar.open{transform:translateX(0)}
+  .score-bar{grid-template-columns:repeat(2,1fr) 110px}
+  .cond{padding:6px 8px}
+  .cond-lbl{font-size:8px}
+  .cond-txt{font-size:9px}
+  .a-score{font-size:18px}
+  .stats-col{min-width:0;padding:6px 10px}
+  .bottom-bar{height:auto;min-height:90px}
+  .sigs-col{padding:4px 10px}
+}
 </style>
 </head>
 <body>
@@ -82,7 +102,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <div class="hdr-sub">PA System — Chứng khoán Việt Nam</div>
   </div>
   <div class="dot"></div>
+  <button class="menu-btn" onclick="toggleSidebar()" title="Menu">☰</button>
 </div>
+<div class="overlay-bg" id="overlayBg" onclick="toggleSidebar()"></div>
 
 <div class="layout">
   <!-- SIDEBAR -->
@@ -360,23 +382,38 @@ document.addEventListener("keydown",e=>{
   if(e.key==="Enter"&&document.activeElement.id==="symbol") run();
 });
 
-// Resizable divider — kéo để điều chỉnh bottom bar
+// Toggle sidebar mobile
+function toggleSidebar(){
+  document.querySelector(".sidebar").classList.toggle("open");
+  document.getElementById("overlayBg").classList.toggle("show");
+}
+
+// Resizable divider — hỗ trợ cả mouse và touch
 (function(){
   const divider  = document.getElementById("dividerEl");
   const bottomBar= document.getElementById("bottomBar");
   let dragging=false, startY=0, startH=0;
-  divider.addEventListener("mousedown",e=>{
-    dragging=true; startY=e.clientY; startH=bottomBar.offsetHeight;
-    document.body.style.cursor="row-resize"; e.preventDefault();
-  });
-  document.addEventListener("mousemove",e=>{
+
+  function startDrag(y){
+    dragging=true; startY=y; startH=bottomBar.offsetHeight;
+    document.body.style.cursor="row-resize";
+  }
+  function moveDrag(y){
     if(!dragging) return;
-    const newH=Math.min(220,Math.max(36,startH+(startY-e.clientY)));
+    const newH=Math.min(220,Math.max(36,startH+(startY-y)));
     bottomBar.style.height=newH+"px";
-  });
-  document.addEventListener("mouseup",()=>{
+  }
+  function endDrag(){
     dragging=false; document.body.style.cursor="";
-  });
+  }
+
+  divider.addEventListener("mousedown",e=>{ startDrag(e.clientY); e.preventDefault(); });
+  document.addEventListener("mousemove",e=>moveDrag(e.clientY));
+  document.addEventListener("mouseup",endDrag);
+
+  divider.addEventListener("touchstart",e=>{ startDrag(e.touches[0].clientY); e.preventDefault(); },{passive:false});
+  document.addEventListener("touchmove",e=>{ if(dragging){ moveDrag(e.touches[0].clientY); e.preventDefault(); } },{passive:false});
+  document.addEventListener("touchend",endDrag);
 })();
 </script>
 </body>
