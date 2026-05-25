@@ -7,28 +7,16 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <style>
-:root {
-  --bg:#080c10; --surface:#0d1117; --card:#161b22; --border:#21262d;
-  --accent:#58a6ff; --green:#00e676; --red:#ff1744; --orange:#ffa000;
-  --text:#e6edf3; --muted:#8b949e;
-  --mono:'JetBrains Mono',monospace; --sans:'Be Vietnam Pro',sans-serif;
-}
+:root{--bg:#080c10;--surface:#0d1117;--card:#161b22;--border:#21262d;--accent:#58a6ff;--green:#00e676;--red:#ff1744;--orange:#ffa000;--text:#e6edf3;--muted:#8b949e;--mono:'JetBrains Mono',monospace;--sans:'Be Vietnam Pro',sans-serif}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans)}
-.sidebar{overflow-y:auto!important}
-
-/* Header */
-.hdr{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface);height:48px}
+.hdr{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface);height:48px;flex-shrink:0}
 .logo{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent);letter-spacing:2px}
 .logo span{color:var(--green)}
 .hdr-sub{font-size:11px;color:var(--muted);font-family:var(--mono)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);animation:pulse 2s infinite;margin-left:auto}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-
-/* Layout: sidebar | main */
 .layout{display:grid;grid-template-columns:260px 1fr;height:calc(100vh - 48px);overflow:hidden}
-
-/* Sidebar */
 .sidebar{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
 .sidebar::-webkit-scrollbar{width:3px}
 .sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -46,13 +34,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .btn{width:100%;padding:11px;background:var(--accent);color:#000;font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:1px;border:none;border-radius:7px;cursor:pointer;transition:all .15s;margin-top:2px}
 .btn:hover{background:#79b8ff;transform:translateY(-1px)}
 .btn:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;transform:none}
-
-/* Main */
-.main{display:flex;flex-direction:column;height:100%;min-height:0}
-
-/* Score bar */
-.score-bar{display:grid;grid-template-columns:repeat(4,1fr) 150px;border-bottom:1px solid var(--border);background:var(--surface)}
-.cond{background:var(--surface);padding:8px 12px;border-right:1px solid var(--border);transition:background .2s}
+.main{display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden}
+.score-bar{display:grid;grid-template-columns:repeat(4,1fr) 150px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+.cond{background:var(--surface);padding:8px 12px;border-right:1px solid var(--border);transition:background .2s;min-width:0}
 .cond.ok{background:rgba(0,230,118,.06)}
 .cond.fail{background:rgba(255,23,68,.04)}
 .cond-lbl{font-size:9px;font-family:var(--mono);color:var(--muted);letter-spacing:1px;margin-bottom:2px}
@@ -62,22 +46,16 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .a-score{font-family:var(--mono);font-size:22px;font-weight:700}
 .a-label{font-size:11px;font-weight:600;text-align:center}
 .a-dir{font-size:10px;color:var(--muted)}
-
-/* Chart fills remaining space */
-.chart-area{flex:1;position:relative;min-height:0;overflow:hidden}
-#chart{width:100%;height:100%}
-.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,12,16,.92);z-index:10;gap:12px;font-family:var(--mono)}
-.overlay.hidden{display:none}
-.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.load-txt{color:var(--muted);font-size:12px}
-.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;font-family:var(--mono)}
-.w-icon{font-size:40px}
-.w-txt{color:var(--muted);font-size:12px}
-
-/* Bottom: stats + signals side by side */
-.bottom-bar{display:flex;align-items:stretch;border-top:1px solid var(--border);background:var(--surface);height:130px;flex-shrink:0}
-.stats-col{padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:5px;border-right:1px solid var(--border);min-width:260px}
+/* Chart container */
+.charts-wrap{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
+#chartCandle{flex:1;min-height:60px}
+#chartVol{height:90px;flex-shrink:0}
+.divider{height:7px;background:var(--border);cursor:row-resize;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.divider:hover{background:#2d333b}
+.divider-handle{width:36px;height:2px;background:#444;border-radius:2px}
+/* Bottom bar */
+.bottom-bar{display:flex;align-items:stretch;border-top:1px solid var(--border);background:var(--surface);height:125px;flex-shrink:0}
+.stats-col{padding:8px 14px;display:flex;flex-direction:column;justify-content:center;gap:4px;border-right:1px solid var(--border);min-width:240px}
 .stat{font-size:10px;font-family:var(--mono)}
 .stat span{color:var(--muted);margin-right:4px}
 .sigs-col{flex:1;overflow:hidden;padding:6px 14px}
@@ -86,6 +64,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .sigs-tbl th{color:var(--muted);text-align:left;padding:2px 8px 2px 0;font-weight:400;border-bottom:1px solid var(--border)}
 .sigs-tbl td{padding:3px 8px 3px 0;border-bottom:1px solid rgba(33,38,45,.5)}
 .sigs-tbl tr:hover td{background:rgba(88,166,255,.04)}
+/* Overlay */
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,12,16,.92);z-index:10;gap:12px;font-family:var(--mono)}
+.overlay.hidden{display:none}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-txt{color:var(--muted);font-size:12px}
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:10px;font-family:var(--mono)}
+.w-icon{font-size:40px}
+.w-txt{color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
@@ -114,12 +101,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
         </div>
       </div>
     </div>
-
     <div class="sec">
       <div class="sec-title">📊 Xu hướng</div>
       <div class="field"><label>Độ nhạy swing (2–20)</label><input id="swing_len" type="number" value="5" min="2" max="20"></div>
     </div>
-
     <div class="sec">
       <div class="sec-title">🎯 Vùng KC/HT</div>
       <div class="row2">
@@ -127,7 +112,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
         <div class="field"><label>Độ rộng (x ATR)</label><input id="zone_atr_mult" type="number" value="0.5" min="0.1" max="2" step="0.1"></div>
       </div>
     </div>
-
     <div class="sec">
       <div class="sec-title">🕯️ Nến đảo chiều</div>
       <div class="row2">
@@ -138,7 +122,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       <div class="cbrow"><input id="use_volume" type="checkbox" checked><label for="use_volume">Lọc Volume</label><input id="vol_ma_len" type="number" value="20" min="5" max="50"></div>
       <div class="cbrow"><input id="use_rsi_div" type="checkbox" checked><label for="use_rsi_div">Phân kỳ RSI ẩn</label><input id="rsi_len" type="number" value="14" min="5" max="30"></div>
     </div>
-
     <div class="sec">
       <div class="sec-title">💰 Quản lý vốn</div>
       <div class="field"><label>Vốn tài khoản (₫)</label><input id="account" type="number" value="100000000" step="10000000" min="1000000" placeholder="vd: 100000000"></div>
@@ -148,7 +131,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       </div>
       <div class="field"><label>Giới hạn lỗ tháng (%)</label><input id="monthly_loss" type="number" value="6.0" min="1" max="20" step="0.5"></div>
     </div>
-
     <div class="sec" style="border-bottom:none;position:sticky;bottom:0;background:var(--surface);z-index:2">
       <button class="btn" id="btnRun" onclick="run()">▶ PHÂN TÍCH</button>
     </div>
@@ -156,7 +138,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
   <!-- MAIN -->
   <main class="main">
-    <!-- Score bar -->
     <div class="score-bar">
       <div class="cond" id="c1"><div class="cond-lbl">ĐIỀU KIỆN 1</div><div class="cond-ico">⬜</div><div class="cond-txt">Xu hướng rõ</div></div>
       <div class="cond" id="c2"><div class="cond-lbl">ĐIỀU KIỆN 2</div><div class="cond-ico">⬜</div><div class="cond-txt">Tại KC/HT</div></div>
@@ -169,39 +150,37 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       </div>
     </div>
 
-    <!-- Chart area với resizable -->
-    <div class="chart-area" style="position:relative">
+    <!-- Charts + welcome -->
+    <div class="charts-wrap" id="chartsWrap">
       <div id="overlay" class="overlay hidden">
         <div class="spinner"></div>
         <div class="load-txt" id="loadTxt">Đang lấy dữ liệu...</div>
       </div>
       <div id="welcome" class="welcome">
         <div class="w-icon">📈</div>
-        <div style="color:var(--accent);font-weight:700">UG Checklist v2</div>
+        <div style="color:var(--accent);font-weight:700;font-family:var(--mono)">UG Checklist v2</div>
         <div class="w-txt">Nhập mã cổ phiếu bên trái → bấm Phân Tích</div>
       </div>
-      <div id="chartArea" style="display:none;width:100%;height:100%;flex-direction:column">
-        <div id="chartCandle" style="flex:1;min-height:60px"></div>
-        <div id="chartVol" style="height:90px;flex-shrink:0"></div>
-        <div id="divider" style="height:7px;background:#21262d;cursor:row-resize;flex-shrink:0;display:flex;align-items:center;justify-content:center" title="Kéo để điều chỉnh">
-          <div style="width:36px;height:2px;background:#444;border-radius:2px"></div>
-        </div>
-        <div id="bottomBar" style="height:125px;display:flex;flex-shrink:0;overflow:hidden;border-top:1px solid var(--border)">
-          <div class="stats-col">
-            <div class="stat"><span>Mã:</span><b id="bSym" style="color:var(--accent)">—</b></div>
-            <div class="stat"><span>Giá:</span><b id="bClose">—</b></div>
-            <div class="stat"><span>RSI:</span><b id="bRsi">—</b> <b id="bRsiSig" style="color:var(--muted);margin-left:4px">—</b></div>
-            <div class="stat"><span>Lỗ tối đa/tháng:</span><b id="bMonthly">—</b></div>
-            <div class="stat"><span>Ngày:</span><b id="bDate">—</b></div>
-          </div>
-          <div class="sigs-col">
-            <div class="sigs-title">5 tín hiệu gần nhất</div>
-            <table class="sigs-tbl">
-              <thead><tr><th>Ngày</th><th>Giá</th><th>Điểm</th><th>Tín hiệu</th><th>Action</th></tr></thead>
-              <tbody id="sigsTbody"></tbody>
-            </table>
-          </div>
-        </div>
+      <div id="chartCandle" style="display:none"></div>
+      <div id="chartVol"    style="display:none;height:90px;flex-shrink:0"></div>
+      <div id="dividerEl"   style="display:none" class="divider"><div class="divider-handle"></div></div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="bottom-bar" id="bottomBar" style="display:none">
+      <div class="stats-col">
+        <div class="stat"><span>Mã:</span><b id="bSym" style="color:var(--accent)">—</b></div>
+        <div class="stat"><span>Giá:</span><b id="bClose">—</b></div>
+        <div class="stat"><span>RSI:</span><b id="bRsi">—</b> <b id="bRsiSig" style="color:var(--muted);margin-left:4px">—</b></div>
+        <div class="stat"><span>Lỗ tối đa/tháng:</span><b id="bMonthly">—</b></div>
+        <div class="stat"><span>Ngày:</span><b id="bDate">—</b></div>
+      </div>
+      <div class="sigs-col">
+        <div class="sigs-title">5 tín hiệu gần nhất</div>
+        <table class="sigs-tbl">
+          <thead><tr><th>Ngày</th><th>Giá</th><th>Điểm</th><th>Tín hiệu</th><th>Action</th></tr></thead>
+          <tbody id="sigsTbody"></tbody>
+        </table>
       </div>
     </div>
   </main>
@@ -216,10 +195,9 @@ function loading(on, txt="Đang phân tích..."){
   document.getElementById("btnRun").disabled=on;
 }
 
-function setCond(id, ok, lbl, txt){
+function setCond(id,ok,n,txt){
   const el=document.getElementById(id);
   el.className="cond "+(ok?"ok":"fail");
-  const n=id.replace("c","");
   el.innerHTML=`<div class="cond-lbl">ĐIỀU KIỆN ${n}</div><div class="cond-ico">${ok?"✅":"❌"}</div><div class="cond-txt">${txt}</div>`;
 }
 
@@ -227,11 +205,8 @@ async function run(){
   const sym=document.getElementById("symbol").value.trim().toUpperCase();
   if(!sym){alert("Vui lòng nhập mã cổ phiếu!");return;}
   const acc=+document.getElementById("account").value;
-  if(!acc||acc<=0){alert("Vốn tài khoản phải lớn hơn 0!");document.getElementById("account").focus();return;}
-  const riskp=+document.getElementById("risk_pct").value;
-  if(riskp<=0||riskp>5){alert("Rủi ro/lệnh phải từ 0.1% đến 5%!");return;}
-  const slp=+document.getElementById("sl_pct").value;
-  if(slp<0.3||slp>20){alert("Stoploss phải từ 0.3% đến 20%!");return;}
+  if(!acc||acc<=0){alert("Vốn tài khoản phải lớn hơn 0!");return;}
+
   loading(true,`Đang lấy dữ liệu ${sym}...`);
   document.getElementById("welcome").style.display="none";
 
@@ -249,7 +224,7 @@ async function run(){
     vol_ma_len:+document.getElementById("vol_ma_len").value,
     use_rsi_div:document.getElementById("use_rsi_div").checked,
     rsi_len:+document.getElementById("rsi_len").value,
-    account:+document.getElementById("account").value,
+    account:acc,
     risk_pct:+document.getElementById("risk_pct").value,
     sl_pct:+document.getElementById("sl_pct").value,
     monthly_loss:+document.getElementById("monthly_loss").value,
@@ -259,11 +234,14 @@ async function run(){
     const res=await fetch("/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)});
     const data=await res.json();
     if(data.error){loading(false);alert("❌ "+data.error);return;}
-    drawChart(data.chart,sym);
     showSummary(data.summary);
     showSignals(data.signals);
+    drawCharts(data.chart, sym);
     loading(false);
-  }catch(e){loading(false);alert("❌ Lỗi kết nối: "+e.message);}
+  }catch(e){
+    loading(false);
+    alert("❌ Lỗi kết nối: "+e.message);
+  }
 }
 
 function showSummary(s){
@@ -283,7 +261,7 @@ function showSummary(s){
   document.getElementById("bRsiSig").textContent=s.rsi_signal;
   document.getElementById("bMonthly").textContent=s.monthly_loss_vnd+"₫";
   document.getElementById("bDate").textContent=s.date;
-  document.getElementById("chartArea").style.display="flex";
+  document.getElementById("bottomBar").style.display="flex";
 }
 
 function showSignals(sigs){
@@ -298,133 +276,107 @@ function showSignals(sigs){
     </tr>`).join("");
 }
 
-function drawChart(c, sym){
-  const el=document.getElementById("chart");
-  el.style.display="block";
+function drawCharts(c, sym){
+  // Hiện các chart div
+  document.getElementById("chartCandle").style.display="block";
+  document.getElementById("chartVol").style.display="block";
+  document.getElementById("dividerEl").style.display="flex";
 
+  // ── Chart nến ──────────────────────────────────────────────
   const candle={type:"candlestick",name:sym,
     x:c.dates,open:c.open,high:c.high,low:c.low,close:c.close,
     increasing:{line:{color:"#00e676"},fillcolor:"#00e676"},
-    decreasing:{line:{color:"#ff1744"},fillcolor:"#ff1744"},
-    xaxis:"x",yaxis:"y"};
+    decreasing:{line:{color:"#ff1744"},fillcolor:"#ff1744"}};
 
   const rTop={type:"scatter",x:c.dates,y:c.resist_top,mode:"lines",
-    line:{color:"rgba(255,23,68,0.2)",width:1},name:"KC trên",xaxis:"x",yaxis:"y"};
+    line:{color:"rgba(255,23,68,0.2)",width:1},name:"KC trên"};
   const rBot={type:"scatter",x:c.dates,y:c.resist_bot,mode:"lines",
-    line:{color:"rgba(255,23,68,0.2)",width:1},fill:"tonexty",fillcolor:"rgba(255,23,68,0.07)",
-    name:"KC dưới",xaxis:"x",yaxis:"y"};
+    line:{color:"rgba(255,23,68,0.2)",width:1},fill:"tonexty",
+    fillcolor:"rgba(255,23,68,0.07)",name:"KC dưới"};
   const sTop={type:"scatter",x:c.dates,y:c.support_top,mode:"lines",
-    line:{color:"rgba(0,230,118,0.2)",width:1},name:"HT trên",xaxis:"x",yaxis:"y"};
+    line:{color:"rgba(0,230,118,0.2)",width:1},name:"HT trên"};
   const sBot={type:"scatter",x:c.dates,y:c.support_bot,mode:"lines",
-    line:{color:"rgba(0,230,118,0.2)",width:1},fill:"tonexty",fillcolor:"rgba(0,230,118,0.07)",
-    name:"HT dưới",xaxis:"x",yaxis:"y"};
+    line:{color:"rgba(0,230,118,0.2)",width:1},fill:"tonexty",
+    fillcolor:"rgba(0,230,118,0.07)",name:"HT dưới"};
 
   const b4=c.bull_4.length?{type:"scatter",mode:"markers+text",name:"✅ LONG",
     x:c.bull_4.map(r=>r.date),y:c.bull_4.map(r=>r.low*.984),
     marker:{symbol:"triangle-up",size:13,color:"#00c853"},
     text:c.bull_4.map(()=>"▲"),textposition:"bottom center",
-    textfont:{color:"#00c853",size:9},xaxis:"x",yaxis:"y"}:null;
+    textfont:{color:"#00c853",size:9}}:null;
   const be4=c.bear_4.length?{type:"scatter",mode:"markers+text",name:"✅ SHORT",
     x:c.bear_4.map(r=>r.date),y:c.bear_4.map(r=>r.high*1.016),
     marker:{symbol:"triangle-down",size:13,color:"#d50000"},
     text:c.bear_4.map(()=>"▼"),textposition:"top center",
-    textfont:{color:"#d50000",size:9},xaxis:"x",yaxis:"y"}:null;
+    textfont:{color:"#d50000",size:9}}:null;
   const b3=c.bull_3.length?{type:"scatter",mode:"markers",name:"🟡 Theo dõi LONG",
     x:c.bull_3.map(r=>r.date),y:c.bull_3.map(r=>r.low*.991),
-    marker:{symbol:"triangle-up",size:9,color:"#ffa000"},xaxis:"x",yaxis:"y"}:null;
+    marker:{symbol:"triangle-up",size:9,color:"#ffa000"}}:null;
   const be3=c.bear_3.length?{type:"scatter",mode:"markers",name:"🟡 Theo dõi SHORT",
     x:c.bear_3.map(r=>r.date),y:c.bear_3.map(r=>r.high*1.009),
-    marker:{symbol:"triangle-down",size:9,color:"#ff6d00"},xaxis:"x",yaxis:"y"}:null;
+    marker:{symbol:"triangle-down",size:9,color:"#ff6d00"}}:null;
 
-  // Volume: normalize về cùng scale với giá để vẽ chung 1 panel (bottom 20%)
-  const maxVol = Math.max(...c.volume.filter(v=>v!=null));
-  const priceMin = Math.min(...c.low.filter(v=>v!=null));
-  const priceMax = Math.max(...c.high.filter(v=>v!=null));
-  const volScale = (priceMax - priceMin) * 0.22;
-  const volNorm = c.volume.map(v => v != null ? priceMin + (v / maxVol) * volScale : null);
-  const volMaNorm = c.vol_ma.map(v => v != null ? priceMin + (v / maxVol) * volScale : null);
+  Plotly.react("chartCandle",
+    [candle,rTop,rBot,sTop,sBot,b4,be4,b3,be3].filter(Boolean),
+    {paper_bgcolor:"#080c10",plot_bgcolor:"#0d1117",
+     font:{color:"#8b949e",family:"JetBrains Mono,monospace",size:10},
+     margin:{t:8,r:8,b:24,l:55},
+     xaxis:{rangeslider:{visible:false},gridcolor:"#21262d",linecolor:"#21262d",tickfont:{size:9}},
+     yaxis:{gridcolor:"#21262d",linecolor:"#21262d",tickfont:{size:9}},
+     legend:{orientation:"h",x:0,y:1.02,bgcolor:"rgba(0,0,0,0)",font:{size:9},xanchor:"left"},
+     hovermode:"x unified",hoverlabel:{bgcolor:"#161b22",bordercolor:"#21262d",font:{size:10}}},
+    {responsive:true,displayModeBar:true,displaylogo:false,scrollZoom:true,
+     modeBarButtonsToKeep:["zoom2d","pan2d","zoomIn2d","zoomOut2d","resetScale2d"]}
+  );
 
-  const volColors = c.close.map((cl,i) => cl >= c.open[i] ? "rgba(0,230,118,0.5)" : "rgba(255,23,68,0.5)");
-  const vol = {type:"bar", name:"Khối lượng", x:c.dates, y:volNorm,
-    marker:{color:volColors, line:{width:0}}, xaxis:"x", yaxis:"y",
-    hovertemplate: c.volume.map((v,i) => `Khối lượng: ${v!=null?Math.round(v/1000)+'K':'-'}<extra></extra>`)};
-  const volMa = {type:"scatter", name:"MA Vol", mode:"lines", x:c.dates, y:volMaNorm,
-    line:{color:"#ffa000", width:1, dash:"dot"}, xaxis:"x", yaxis:"y", hoverinfo:"skip"};
+  // ── Chart khối lượng ───────────────────────────────────────
+  const volColors=c.close.map((cl,i)=>cl>=c.open[i]?"rgba(0,230,118,0.65)":"rgba(255,23,68,0.65)");
+  Plotly.react("chartVol",
+    [{type:"bar",name:"Khối lượng",x:c.dates,y:c.volume,
+      marker:{color:volColors,line:{width:0}}},
+     {type:"scatter",name:"MA Vol",mode:"lines",x:c.dates,y:c.vol_ma,
+      line:{color:"#ffa000",width:1.2,dash:"dot"}}],
+    {paper_bgcolor:"#080c10",plot_bgcolor:"#0d1117",
+     font:{color:"#8b949e",family:"JetBrains Mono,monospace",size:10},
+     margin:{t:4,r:8,b:24,l:55},
+     xaxis:{gridcolor:"#21262d",linecolor:"#21262d",tickfont:{size:9}},
+     yaxis:{gridcolor:"#21262d",linecolor:"#21262d",tickfont:{size:9}},
+     legend:{orientation:"h",x:0,y:1.1,bgcolor:"rgba(0,0,0,0)",font:{size:9}},
+     hovermode:"x unified",hoverlabel:{bgcolor:"#161b22",bordercolor:"#21262d",font:{size:10}}},
+    {responsive:true,displayModeBar:false,scrollZoom:true}
+  );
 
-  // Chart nến
-  const tracesCandle = [candle,rTop,rBot,sTop,sBot,b4,be4,b3,be3].filter(Boolean);
-  const layoutCandle = {
-    paper_bgcolor:"#080c10", plot_bgcolor:"#0d1117",
-    font:{color:"#8b949e", family:"JetBrains Mono,monospace", size:10},
-    margin:{t:8,r:8,b:24,l:55},
-    xaxis:{rangeslider:{visible:false}, gridcolor:"#21262d", linecolor:"#21262d", tickfont:{size:9}},
-    yaxis:{gridcolor:"#21262d", linecolor:"#21262d", tickfont:{size:9}},
-    legend:{orientation:"h", x:0, y:1.02, bgcolor:"rgba(0,0,0,0)", font:{size:9}, xanchor:"left"},
-    hovermode:"x unified",
-    hoverlabel:{bgcolor:"#161b22", bordercolor:"#21262d", font:{size:10}},
-  };
-  Plotly.react("chartCandle", tracesCandle, layoutCandle, {
-    responsive:true, displayModeBar:true, displaylogo:false, scrollZoom:true,
-    modeBarButtonsToKeep:['zoom2d','pan2d','zoomIn2d','zoomOut2d','resetScale2d']
-  });
-
-  // Chart khối lượng — sync xaxis với chart nến
-  const volColors = c.close.map((cl,i) => cl >= c.open[i] ? "rgba(0,230,118,0.65)" : "rgba(255,23,68,0.65)");
-  const volTrace = {type:"bar", name:"Khối lượng", x:c.dates, y:c.volume,
-    marker:{color:volColors, line:{width:0}}, xaxis:"x", yaxis:"y"};
-  const volMaTrace = {type:"scatter", name:"MA Vol", mode:"lines", x:c.dates, y:c.vol_ma,
-    line:{color:"#ffa000", width:1.2, dash:"dot"}, xaxis:"x", yaxis:"y"};
-
-  const layoutVol = {
-    paper_bgcolor:"#080c10", plot_bgcolor:"#0d1117",
-    font:{color:"#8b949e", family:"JetBrains Mono,monospace", size:10},
-    margin:{t:4,r:8,b:24,l:55},
-    xaxis:{gridcolor:"#21262d", linecolor:"#21262d", tickfont:{size:9}},
-    yaxis:{gridcolor:"#21262d", linecolor:"#21262d", tickfont:{size:9}},
-    legend:{orientation:"h", x:0, y:1.05, bgcolor:"rgba(0,0,0,0)", font:{size:9}},
-    hovermode:"x unified",
-    hoverlabel:{bgcolor:"#161b22", bordercolor:"#21262d", font:{size:10}},
-  };
-  Plotly.react("chartVol", [volTrace, volMaTrace], layoutVol, {
-    responsive:true, displayModeBar:false, scrollZoom:true
-  });
-
-  // Sync zoom giữa 2 chart
-  document.getElementById("chartCandle").on("plotly_relayout", d => {
-    if (d["xaxis.range[0]"]) {
-      Plotly.relayout("chartVol", {"xaxis.range[0]": d["xaxis.range[0]"], "xaxis.range[1]": d["xaxis.range[1]"]});
-    } else if (d["xaxis.autorange"]) {
-      Plotly.relayout("chartVol", {"xaxis.autorange": true});
-    }
+  // Sync zoom
+  document.getElementById("chartCandle").on("plotly_relayout", d=>{
+    if(d["xaxis.range[0]"])
+      Plotly.relayout("chartVol",{"xaxis.range[0]":d["xaxis.range[0]"],"xaxis.range[1]":d["xaxis.range[1]"]});
+    else if(d["xaxis.autorange"])
+      Plotly.relayout("chartVol",{"xaxis.autorange":true});
   });
 }
 
+// Enter để chạy
 document.addEventListener("keydown",e=>{
   if(e.key==="Enter"&&document.activeElement.id==="symbol") run();
 });
 
-// Resizable divider
+// Resizable divider — kéo để điều chỉnh bottom bar
 (function(){
-  const divider = document.getElementById("divider");
-  const bottomBar = document.getElementById("bottomBar");
-  if(!divider||!bottomBar) return;
+  const divider  = document.getElementById("dividerEl");
+  const bottomBar= document.getElementById("bottomBar");
   let dragging=false, startY=0, startH=0;
-  divider.addEventListener("mousedown", e=>{
+  divider.addEventListener("mousedown",e=>{
     dragging=true; startY=e.clientY; startH=bottomBar.offsetHeight;
     document.body.style.cursor="row-resize"; e.preventDefault();
   });
-  document.addEventListener("mousemove", e=>{
+  document.addEventListener("mousemove",e=>{
     if(!dragging) return;
-    const diff = startY - e.clientY;
-    const newH = Math.min(220, Math.max(36, startH + diff));
-    bottomBar.style.height = newH+"px";
+    const newH=Math.min(220,Math.max(36,startH+(startY-e.clientY)));
+    bottomBar.style.height=newH+"px";
   });
-  document.addEventListener("mouseup", ()=>{
+  document.addEventListener("mouseup",()=>{
     dragging=false; document.body.style.cursor="";
-    divider.style.background="#21262d";
   });
-  divider.addEventListener("mouseenter",()=>{ divider.style.background="#333"; });
-  divider.addEventListener("mouseleave",()=>{ if(!dragging) divider.style.background="#21262d"; });
 })();
 </script>
 </body>
