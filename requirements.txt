@@ -1,0 +1,10 @@
+flask
+gunicorn
+pandas
+numpy
+vnstock==0.2.9.2
+requests
+beautifulsoup4
+packaging
+ipython
+yfinance
