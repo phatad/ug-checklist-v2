@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <style>
-:root{--bg:#080c10;--surface:#0d1117;--card:#161b22;--border:#21262d;--accent:#58a6ff;--green:#00e676;--red:#ff1744;--orange:#ffa000;--text:#e6edf3;--muted:#8b949e;--mono:'JetBrains Mono',monospace;--sans:'Be Vietnam Pro',sans-serif}
+:root{--bg:#080c10;--surface:#0d1117;--card:#161b22;--border:#21262d;--accent:#58a6ff;--green:#00e676;--red:#ff1744;--orange:#ffa000;--text:#e6edf3;--muted:#8b949e;--mono:'JetBrains Mono',ui-monospace,monospace;--sans:'Be Vietnam Pro',system-ui,sans-serif}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans)}
 /* Header */
@@ -151,7 +151,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   .layout{grid-template-columns:1fr}
   .sidebar{position:fixed;top:48px;left:0;bottom:0;width:80vw;max-width:280px;z-index:100;transform:translateX(-100%);transition:transform .25s;box-shadow:4px 0 20px rgba(0,0,0,.5)}
   .sidebar.open{transform:translateX(0)}
-  .score-bar{grid-template-columns:repeat(2,1fr) 110px}
+  .score-bar{grid-template-columns:1fr 1fr}
+  .action{grid-column:1/-1;flex-direction:row;gap:12px;padding:6px 10px}
   .stats-col{min-width:0;padding:6px 10px}
   .bottom-bar{height:auto}
 }
@@ -310,6 +311,7 @@ const ACTION_SHORT = ["❌","❌","🟠","🟡","🟢"];
 let watchlist = JSON.parse(localStorage.getItem("ug_wl")||"[]");
 let results   = {}; // sym -> data
 let activeSym = null;
+let cancelRun = false;
 
 function saveWL(){ localStorage.setItem("ug_wl", JSON.stringify(watchlist)); }
 
@@ -317,8 +319,12 @@ function addSymbol(){
   const val = document.getElementById("wlInput").value.trim().toUpperCase();
   if(!val) return;
   const syms = val.split(/[,\s]+/).filter(Boolean);
-  syms.forEach(sym => {
-    if(sym && !watchlist.includes(sym)) watchlist.push(sym);
+  syms.forEach(s => {
+    const sym = s.trim().toUpperCase();
+    if(sym && !watchlist.includes(sym)){
+      if(watchlist.length >= 20){ alert("Tối đa 20 mã trong watchlist!"); return; }
+      watchlist.push(sym);
+    }
   });
   document.getElementById("wlInput").value = "";
   saveWL();
@@ -342,11 +348,14 @@ function renderWLList(){
   }
   el.innerHTML = watchlist.map(sym => {
     const r = results[sym];
-    const score = r ? r.summary.score : null;
+    const score = r && r.summary ? r.summary.score : null;
+    const hasError = r && r.error;
     const isActive = sym === activeSym;
-    const scoreHtml = score !== null
-      ? `<span class="wl-score" style="color:${SC[score]}">${score}/4</span> <span class="wl-action">${ACTION_SHORT[score]}</span>`
-      : `<span style="color:var(--muted);font-size:10px">—</span>`;
+    const scoreHtml = hasError
+      ? `<span style="color:var(--red);font-size:9px">Lỗi</span>`
+      : score !== null
+        ? `<span class="wl-score" style="color:${SC[score]}">${score}/4</span> <span class="wl-action">${ACTION_SHORT[score]}</span>`
+        : `<span style="color:var(--muted);font-size:10px">—</span>`;
     return `<div class="wl-item${isActive?' active':''}" onclick="selectSym('${sym}')">
       <span class="wl-sym" style="color:${isActive?'var(--accent)':'var(--text)'}">${sym}</span>
       ${scoreHtml}
@@ -367,8 +376,8 @@ function renderOverview(){
   }
   // Sort theo điểm giảm dần, chưa chạy xuống cuối
   const sorted = [...watchlist].sort((a,b)=>{
-    const sa = results[a] ? results[a].summary.score : -1;
-    const sb = results[b] ? results[b].summary.score : -1;
+    const sa = (results[a] && results[a].summary) ? results[a].summary.score : -1;
+    const sb = (results[b] && results[b].summary) ? results[b].summary.score : -1;
     return sb - sa;
   });
   const rows = sorted.map(sym => {
@@ -376,6 +385,10 @@ function renderOverview(){
     if(!r) return `<tr class="loading-row" onclick="selectSym('${sym}')">
       <td style="font-weight:700;color:var(--accent)">${sym}</td>
       <td colspan="5" style="color:var(--muted)">Chưa chạy...</td>
+    </tr>`;
+    if(r.error) return `<tr onclick="selectSym('${sym}')">
+      <td style="font-weight:700;color:var(--red);font-family:var(--mono)">${sym}</td>
+      <td colspan="5" style="color:var(--red);font-size:10px">⚠️ ${r.error}</td>
     </tr>`;
     const s = r.summary;
     const col = SC[s.score];
@@ -400,23 +413,39 @@ function renderOverview(){
   </div>`;
 }
 
+let isRunning = false;
+
 async function runAll(){
   if(!watchlist.length){ alert("Thêm mã vào watchlist trước!"); return; }
-  document.getElementById("btnRunAll").disabled = true;
-  document.getElementById("btnRunAll").textContent = "⏳ Đang chạy...";
+  if(isRunning){ stopRun(); return; }
+
+  isRunning = true;
+  cancelRun = false;
+  const btn = document.getElementById("btnRunAll");
+  btn.textContent = "⏹ DỪNG";
+  btn.style.background = "var(--red)";
 
   for(const sym of watchlist){
-    document.getElementById("btnRunAll").textContent = `⏳ ${sym}...`;
+    if(cancelRun) break;
+    btn.textContent = `⏹ ${sym}... (dừng)`;
     await analyzeOne(sym);
     renderWLList();
     renderOverview();
   }
 
-  document.getElementById("btnRunAll").disabled = false;
-  document.getElementById("btnRunAll").textContent = "▶ CHẠY TẤT CẢ";
-
-  // Tự chọn mã đầu tiên
+  isRunning = false;
+  cancelRun = false;
+  btn.textContent = "▶ CHẠY TẤT CẢ";
+  btn.style.background = "";
   if(!activeSym && watchlist.length) selectSym(watchlist[0]);
+}
+
+function stopRun(){
+  cancelRun = true;
+  isRunning = false;
+  const btn = document.getElementById("btnRunAll");
+  btn.textContent = "▶ CHẠY TẤT CẢ";
+  btn.style.background = "";
 }
 
 async function analyzeOne(sym){
@@ -424,8 +453,14 @@ async function analyzeOne(sym){
   try{
     const res  = await fetch("/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)});
     const data = await res.json();
-    if(!data.error) results[sym] = data;
-  }catch(e){ console.error(sym, e); }
+    if(!data.error){
+      results[sym] = data;
+    } else {
+      results[sym] = {error: data.error};
+    }
+  }catch(e){
+    results[sym] = {error: "Không kết nối được server"};
+  }
 }
 
 function getParams(sym){
@@ -465,6 +500,16 @@ async function selectSym(sym){
 
   const data = results[sym];
   if(!data){ showChartLoading(false); return; }
+
+  if(data.error){
+    showChartLoading(false);
+    // Hiện lỗi trong overlay
+    const ov = document.getElementById("overlay");
+    ov.classList.remove("hidden");
+    ov.innerHTML = `<div style="font-size:28px">⚠️</div><div style="color:var(--red);font-family:var(--mono);font-size:12px;text-align:center;max-width:300px">${data.error}</div>`;
+    switchTab("chart");
+    return;
+  }
 
   showSummary(data.summary);
   showSignals(data.signals);
@@ -606,22 +651,18 @@ function drawCharts(c, sym){
     {responsive:true,displayModeBar:false,scrollZoom:true}
   );
 
-  document.getElementById("chartCandle").on("plotly_relayout",d=>{
+  // Sync zoom - dùng flag tránh duplicate
+  const candleEl = document.getElementById("chartCandle");
+  candleEl.removeAllListeners && candleEl.removeAllListeners("plotly_relayout");
+  candleEl.on("plotly_relayout",d=>{
     if(d["xaxis.range[0]"]) Plotly.relayout("chartVol",{"xaxis.range[0]":d["xaxis.range[0]"],"xaxis.range[1]":d["xaxis.range[1]"]});
     else if(d["xaxis.autorange"]) Plotly.relayout("chartVol",{"xaxis.autorange":true});
   });
 
-  // Force resize để chart full width
   setTimeout(()=>{
     Plotly.Plots.resize(document.getElementById("chartCandle"));
     Plotly.Plots.resize(document.getElementById("chartVol"));
   }, 100);
-
-  // Resize khi cửa sổ thay đổi kích thước
-  window.addEventListener("resize", ()=>{
-    Plotly.Plots.resize(document.getElementById("chartCandle"));
-    Plotly.Plots.resize(document.getElementById("chartVol"));
-  });
 }
 
 function switchTab(name){
@@ -667,6 +708,14 @@ function toggleSidebar(){
 // Khởi động
 renderWLList();
 renderOverview();
+
+// Resize charts 1 lần duy nhất
+window.addEventListener("resize", ()=>{
+  if(document.getElementById("chartCandle").data){
+    Plotly.Plots.resize(document.getElementById("chartCandle"));
+    Plotly.Plots.resize(document.getElementById("chartVol"));
+  }
+});
 </script>
 </body>
 </html>
