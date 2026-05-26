@@ -109,7 +109,7 @@ def get_data(symbol, start, end=None, timeframe="1D"):
     try:
         import yfinance as yf
         ticker = symbol+".VN" if not symbol.endswith(".VN") else symbol
-        df = _normalize(yf.download(ticker, start=start, end=end, auto_adjust=True, progress=False).reset_index())
+        df = _normalize(yf.download(ticker, start=start, end=end, auto_adjust=True, progress=False, timeout=15).reset_index())
         if not df.empty:
             log.info(f"yfinance OK: {ticker} {len(df)} nến")
             return df
@@ -329,8 +329,8 @@ def analyze():
 
     except Exception as e:
         import traceback
-        log.error(traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
+        log.error(traceback.format_exc())  # chỉ log server-side
+        return jsonify({"error": f"Lỗi phân tích mã '{data.get('symbol','?')}': {str(e)[:200]}"}), 500
 
 
 if __name__ == "__main__":
