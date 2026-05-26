@@ -118,8 +118,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .tab-btn{padding:8px 20px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all .15s;letter-spacing:1px}
 .tab-btn:hover{color:var(--text)}
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
-.tab-pane{display:none;flex:1;min-height:0;overflow:hidden;flex-direction:column}
-.tab-pane.active{display:flex}
+.tab-pane{display:none!important;flex:1;min-height:0;overflow:hidden;flex-direction:column}
+.tab-pane.active{display:flex!important}
 /* Chi tiết pane */
 .detail-wrap{flex:1;overflow-y:auto;padding:16px 20px;font-family:var(--mono);font-size:12px}
 .detail-wrap::-webkit-scrollbar{width:4px}
@@ -226,7 +226,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     </div>
 
     <!-- Tab: Biểu đồ -->
-    <div class="tab-pane active" id="tabChart" style="flex-direction:column">
+    <div class="tab-pane active" id="tabChart">
 
     <!-- Charts + welcome -->
     <div class="charts-wrap" id="chartsWrap">
@@ -266,7 +266,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     </div><!-- end tab-pane chart -->
 
     <!-- Tab: Chi tiết -->
-    <div class="tab-pane" id="tabDetail" style="flex-direction:column">
+    <div class="tab-pane" id="tabDetail">
       <div class="detail-wrap" id="detailWrap">
         <div style="color:var(--muted);font-family:var(--mono);font-size:12px;padding:40px;text-align:center">
           Bấm Phân Tích để xem chi tiết
@@ -458,8 +458,13 @@ function switchTab(name){
   document.querySelectorAll(".tab-btn").forEach((b,i)=>{
     b.classList.toggle("active", (i===0&&name==="chart")||(i===1&&name==="detail"));
   });
-  document.getElementById("tabChart").classList.toggle("active", name==="chart");
-  document.getElementById("tabDetail").classList.toggle("active", name==="detail");
+  const tc = document.getElementById("tabChart");
+  const td = document.getElementById("tabDetail");
+  tc.classList.toggle("active", name==="chart");
+  td.classList.toggle("active", name==="detail");
+  // Force display để tránh CSS conflict
+  tc.style.display = name==="chart" ? "flex" : "none";
+  td.style.display = name==="detail" ? "flex" : "none";
 }
 
 // Render tab chi tiết
