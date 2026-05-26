@@ -610,6 +610,18 @@ function drawCharts(c, sym){
     if(d["xaxis.range[0]"]) Plotly.relayout("chartVol",{"xaxis.range[0]":d["xaxis.range[0]"],"xaxis.range[1]":d["xaxis.range[1]"]});
     else if(d["xaxis.autorange"]) Plotly.relayout("chartVol",{"xaxis.autorange":true});
   });
+
+  // Force resize để chart full width
+  setTimeout(()=>{
+    Plotly.Plots.resize(document.getElementById("chartCandle"));
+    Plotly.Plots.resize(document.getElementById("chartVol"));
+  }, 100);
+
+  // Resize khi cửa sổ thay đổi kích thước
+  window.addEventListener("resize", ()=>{
+    Plotly.Plots.resize(document.getElementById("chartCandle"));
+    Plotly.Plots.resize(document.getElementById("chartVol"));
+  });
 }
 
 function switchTab(name){
