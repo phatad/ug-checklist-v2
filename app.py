@@ -18,7 +18,11 @@ import os, secrets
 app = Flask(__name__)
 
 # ── Security config ────────────────────────────────────────────
-app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+_secret = os.environ.get("SECRET_KEY")
+if not _secret:
+    log.warning("⚠️  SECRET_KEY chưa set → dùng key tạm, session sẽ mất khi restart!")
+    _secret = secrets.token_hex(32)
+app.secret_key = _secret
 app.permanent_session_lifetime = timedelta(hours=12)
 
 # Import auth
