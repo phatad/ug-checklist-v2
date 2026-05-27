@@ -9,12 +9,20 @@ warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger(__name__)
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
+from datetime import date, timedelta
 import pandas as pd
 import numpy as np
-from datetime import date
+import os, secrets
 
 app = Flask(__name__)
+
+# ── Security config ────────────────────────────────────────────
+app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+app.permanent_session_lifetime = timedelta(hours=12)
+
+# Import auth
+from auth import login_required, do_login
 
 # ═══════════════════════════════════════════════════════════════
 #  HELPER
@@ -348,11 +356,30 @@ def run_checklist(df_ltf, df_htf, cfg):
 # ═══════════════════════════════════════════════════════════════
 #  ROUTES
 # ═══════════════════════════════════════════════════════════════
+@app.route("/login-page")
+def login_page():
+    if session.get("logged_in"):
+        return redirect(url_for("index"))
+    return send_file("login.html")
+
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.json or {}
+    ok, msg = do_login(data.get("username",""), data.get("password",""))
+    return jsonify({"ok": ok, "message": msg})
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login_page"))
+
 @app.route("/")
+@login_required
 def index():
     return render_template("index.html")
 
 @app.route("/analyze", methods=["POST"])
+@login_required
 def analyze():
     try:
         data   = request.json
