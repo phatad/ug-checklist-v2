@@ -105,12 +105,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .charts-wrap{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
 #chartCandle{flex:1;min-height:60px}
 #chartVol{height:80px;flex-shrink:0}
-.divider{height:7px;background:var(--border);cursor:row-resize;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.divider:hover{background:#2d333b}
-.divider-handle{width:36px;height:2px;background:#444;border-radius:2px}
+
 /* Bottom bar */
-.bottom-bar{display:flex;align-items:stretch;border-top:1px solid var(--border);background:var(--surface);height:110px;flex-shrink:0}
-.stats-col{padding:8px 14px;display:flex;flex-direction:column;justify-content:center;gap:3px;border-right:1px solid var(--border);min-width:220px}
+.bottom-bar{display:flex;align-items:center;border-top:1px solid var(--border);background:var(--surface);height:44px;flex-shrink:0;padding:0 14px}
+.stats-col{padding:0 14px;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px;width:100%}
 .stat{font-size:10px;font-family:var(--mono)}
 .stat span{color:var(--muted);margin-right:4px}
 .sigs-col{flex:1;overflow:hidden;padding:6px 12px}
@@ -270,22 +268,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
         </div>
         <div id="chartCandle" style="display:none"></div>
         <div id="chartVol"    style="display:none;height:80px;flex-shrink:0"></div>
-        <div id="dividerEl"   style="display:none" class="divider"><div class="divider-handle"></div></div>
+
       </div>
       <div class="bottom-bar" id="bottomBar" style="display:none">
-        <div class="stats-col">
+        <div class="stats-col" style="border-right:none;flex-direction:row;flex-wrap:wrap;gap:16px;align-items:center">
           <div class="stat"><span>Mã:</span><b id="bSym" style="color:var(--accent)">—</b></div>
           <div class="stat"><span>Giá:</span><b id="bClose">—</b></div>
           <div class="stat"><span>RSI:</span><b id="bRsi">—</b> <b id="bRsiSig" style="color:var(--muted);margin-left:4px">—</b></div>
           <div class="stat"><span>Lỗ tối đa/tháng:</span><b id="bMonthly">—</b></div>
           <div class="stat"><span>Ngày:</span><b id="bDate">—</b></div>
-        </div>
-        <div class="sigs-col">
-          <div class="sigs-title">5 tín hiệu gần nhất</div>
-          <table class="sigs-tbl">
-            <thead><tr><th>Ngày</th><th>Giá</th><th>Điểm</th><th>Tín hiệu</th><th>Action</th></tr></thead>
-            <tbody id="sigsTbody"></tbody>
-          </table>
         </div>
       </div>
     </div>
@@ -512,7 +503,6 @@ async function selectSym(sym){
   }
 
   showSummary(data.summary);
-  showSignals(data.signals);
   renderDetail(data.summary, data.signals);
   drawCharts(data.chart, sym);
   showChartLoading(false);
@@ -568,16 +558,7 @@ function showSummary(s){
   document.getElementById("bottomBar").style.display="flex";
 }
 
-function showSignals(sigs){
-  document.getElementById("sigsTbody").innerHTML=sigs.map(r=>`
-    <tr>
-      <td style="color:var(--muted)">${r.date}</td>
-      <td style="font-weight:600">${r.close}₫</td>
-      <td><span style="color:${SC[r.score]};font-weight:700">${r.score}/4</span></td>
-      <td>${r.signal}</td>
-      <td>${ACTION_SHORT[r.score]}</td>
-    </tr>`).join("");
-}
+// showSignals removed — signals now only in tab Chi tiết
 
 function renderDetail(s, sigs){
   const scoreCol = SC[s.score];
@@ -621,7 +602,6 @@ function renderDetail(s, sigs){
 function drawCharts(c, sym){
   document.getElementById("chartCandle").style.display="block";
   document.getElementById("chartVol").style.display="block";
-  document.getElementById("dividerEl").style.display="flex";
 
   const candle={type:"candlestick",name:sym,
     x:c.dates,open:c.open,high:c.high,low:c.low,close:c.close,
@@ -689,21 +669,7 @@ function toggleSidebar(){
   document.getElementById("overlayBg").classList.toggle("show");
 }
 
-// Resizable divider
-(function(){
-  const divider  = document.getElementById("dividerEl");
-  const bottomBar= document.getElementById("bottomBar");
-  let dragging=false, startY=0, startH=0;
-  function startDrag(y){ dragging=true; startY=y; startH=bottomBar.offsetHeight; document.body.style.cursor="row-resize"; }
-  function moveDrag(y){ if(!dragging) return; bottomBar.style.height=Math.min(220,Math.max(36,startH+(startY-y)))+"px"; }
-  function endDrag(){ dragging=false; document.body.style.cursor=""; }
-  divider.addEventListener("mousedown",e=>{ if(!e.target.closest(".divider")) return; startDrag(e.clientY); e.preventDefault(); });
-  document.addEventListener("mousemove",e=>moveDrag(e.clientY));
-  document.addEventListener("mouseup",endDrag);
-  divider.addEventListener("touchstart",e=>{ startDrag(e.touches[0].clientY); e.preventDefault(); },{passive:false});
-  document.addEventListener("touchmove",e=>{ if(dragging){ moveDrag(e.touches[0].clientY); e.preventDefault(); } },{passive:false});
-  document.addEventListener("touchend",endDrag);
-})();
+
 
 // Khởi động
 renderWLList();
