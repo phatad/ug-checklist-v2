@@ -168,6 +168,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <div class="hdr-sub">PA System v3 — Chứng khoán Việt Nam</div>
   </div>
   <div class="dot"></div>
+  <a href="/logout" style="font-family:var(--mono);font-size:10px;color:var(--muted);
+     text-decoration:none;padding:4px 8px;border:1px solid var(--border);border-radius:4px;
+     margin-left:auto;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='var(--red)'"
+     onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'"
+     title="Đăng xuất">LOGOUT</a>
   <button class="menu-btn" onclick="toggleSidebar()">☰</button>
 </div>
 <div class="overlay-bg" id="overlayBg" onclick="toggleSidebar()"></div>
