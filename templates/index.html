@@ -104,7 +104,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 /* Chart area */
 .charts-wrap{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
 #chartCandle{flex:1;min-height:60px}
-#chartVol{height:80px;flex-shrink:0}
+#chartVol{height:100px;flex-shrink:0;min-height:60px}
+.chart-divider{height:6px;background:var(--border);cursor:row-resize;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;transition:background .15s}
+.chart-divider:hover,.chart-divider.dragging{background:#2d333b}
+.chart-divider-handle{width:36px;height:2px;background:#555;border-radius:2px}
 
 /* Bottom bar */
 .bottom-bar{display:flex;align-items:center;border-top:1px solid var(--border);background:var(--surface);height:44px;flex-shrink:0;padding:0 14px}
@@ -267,7 +271,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
           <div class="load-txt">Chọn mã từ watchlist để xem biểu đồ</div>
         </div>
         <div id="chartCandle" style="display:none"></div>
-        <div id="chartVol"    style="display:none;height:80px;flex-shrink:0"></div>
+        <div id="chartDivider" class="chart-divider" style="display:none">
+          <div class="chart-divider-handle"></div>
+        </div>
+        <div id="chartVol" style="display:none;height:100px;flex-shrink:0;min-height:60px"></div>
 
       </div>
       <div class="bottom-bar" id="bottomBar" style="display:none">
@@ -602,6 +609,7 @@ function renderDetail(s, sigs){
 function drawCharts(c, sym){
   document.getElementById("chartCandle").style.display="block";
   document.getElementById("chartVol").style.display="block";
+  document.getElementById("chartDivider").style.display="flex";
 
   const candle={type:"candlestick",name:sym,
     x:c.dates,open:c.open,high:c.high,low:c.low,close:c.close,
@@ -675,13 +683,90 @@ function toggleSidebar(){
 renderWLList();
 renderOverview();
 
-// Resize charts 1 lần duy nhất
+// Resize charts khi cửa sổ thay đổi
 window.addEventListener("resize", ()=>{
-  if(document.getElementById("chartCandle").data){
-    Plotly.Plots.resize(document.getElementById("chartCandle"));
-    Plotly.Plots.resize(document.getElementById("chartVol"));
-  }
+  const cc = document.getElementById("chartCandle");
+  const cv = document.getElementById("chartVol");
+  if(cc.data){ Plotly.Plots.resize(cc); }
+  if(cv.data){ Plotly.Plots.resize(cv); }
 });
+
+// Kéo divider giữa 2 chart
+(function(){
+  const divider = document.getElementById("chartDivider");
+  const volEl   = document.getElementById("chartVol");
+  const wrap    = document.getElementById("chartsWrap");
+  if(!divider) return;
+
+  const MIN_VOL_H  = 60;   // px tối thiểu chart KL (Plotly cần ít nhất 60px)
+  const MAX_RATIO  = 0.65; // tối đa 65% wrap height
+  let dragging = false, startY = 0, startH = 0;
+  let rafId = null;         // requestAnimationFrame ID để throttle resize
+
+  function onStart(y){
+    dragging = true;
+    startY   = y;
+    startH   = volEl.offsetHeight;
+    divider.classList.add("dragging");
+    document.body.style.cursor     = "row-resize";
+    document.body.style.userSelect = "none";
+  }
+
+  function applyResize(newH){
+    volEl.style.height = newH + "px";
+    // Throttle Plotly resize bằng rAF — tránh resize mỗi pixel
+    if(rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(()=>{
+      const cc = document.getElementById("chartCandle");
+      const cv = document.getElementById("chartVol");
+      if(cc && cc.data) Plotly.Plots.resize(cc);
+      if(cv && cv.data) Plotly.Plots.resize(cv);
+      rafId = null;
+    });
+  }
+
+  function onMove(y){
+    if(!dragging) return;
+    const diff  = startY - y;
+    const wrapH = wrap.offsetHeight;
+    const newH  = Math.min(wrapH * MAX_RATIO, Math.max(MIN_VOL_H, startH + diff));
+    applyResize(newH);
+  }
+
+  function onEnd(){
+    if(!dragging) return;
+    dragging = false;
+    divider.classList.remove("dragging");
+    document.body.style.cursor     = "";
+    document.body.style.userSelect = "";
+    // Final resize sau khi thả để đảm bảo chart đúng size
+    if(rafId) cancelAnimationFrame(rafId);
+    const cc = document.getElementById("chartCandle");
+    const cv = document.getElementById("chartVol");
+    if(cc && cc.data) Plotly.Plots.resize(cc);
+    if(cv && cv.data) Plotly.Plots.resize(cv);
+  }
+
+  // Mouse
+  divider.addEventListener("mousedown", e=>{ onStart(e.clientY); e.preventDefault(); });
+  document.addEventListener("mousemove", e=>onMove(e.clientY));
+  document.addEventListener("mouseup",   onEnd);
+
+  // Touch — preventDefault tránh scroll trang khi kéo
+  divider.addEventListener("touchstart", e=>{
+    onStart(e.touches[0].clientY);
+    e.preventDefault();
+  }, {passive:false});
+  document.addEventListener("touchmove", e=>{
+    if(dragging){ onMove(e.touches[0].clientY); e.preventDefault(); }
+  }, {passive:false});
+  document.addEventListener("touchend",   onEnd);
+  document.addEventListener("touchcancel", onEnd);
+
+  // Reset khi switch tab hoặc window mất focus
+  document.addEventListener("visibilitychange", ()=>{ if(document.hidden) onEnd(); });
+  window.addEventListener("blur", onEnd);
+})();
 </script>
 </body>
 </html>
