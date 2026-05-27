@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UG Checklist v3 — Đăng nhập</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#080c10;font-family:'JetBrains Mono',ui-monospace,monospace;color:#e6edf3}
+body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+
+/* Background grid */
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(88,166,255,.03) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(88,166,255,.03) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none}
+
+/* Glow orbs */
+body::after{content:'';position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 600px 400px at 30% 20%,rgba(0,230,118,.04) 0%,transparent 70%),
+             radial-gradient(ellipse 500px 400px at 80% 80%,rgba(88,166,255,.05) 0%,transparent 70%)}
+
+.wrap{position:relative;width:100%;max-width:420px}
+
+/* Logo section */
+.logo-wrap{text-align:center;margin-bottom:32px}
+.logo-icon{width:56px;height:56px;background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.2);
+  border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;
+  font-size:24px}
+.logo-txt{font-size:22px;font-weight:700;letter-spacing:3px;color:#58a6ff}
+.logo-txt span{color:#00e676}
+.logo-sub{font-size:11px;color:#8b949e;margin-top:4px;letter-spacing:1px}
+
+/* Card */
+.card{background:rgba(13,17,23,.9);border:1px solid #21262d;border-radius:16px;
+  padding:36px;backdrop-filter:blur(20px);position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(88,166,255,.3),transparent)}
+
+/* Fields */
+.field{margin-bottom:18px}
+.field label{display:flex;align-items:center;gap:6px;font-size:10px;color:#8b949e;
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.field label svg{opacity:.6}
+.input-wrap{position:relative}
+.input-wrap input{width:100%;background:#080c10;border:1px solid #21262d;border-radius:8px;
+  color:#e6edf3;font-family:inherit;font-size:13px;padding:12px 14px;outline:none;
+  transition:border-color .2s,box-shadow .2s;letter-spacing:.5px}
+.input-wrap input:focus{border-color:#58a6ff;box-shadow:0 0 0 3px rgba(88,166,255,.1)}
+.input-wrap input::placeholder{color:#3d444d}
+
+/* Toggle password */
+.toggle-pw{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:#8b949e;cursor:pointer;padding:4px;
+  display:flex;align-items:center;transition:color .15s}
+.toggle-pw:hover{color:#e6edf3}
+
+/* Error */
+.error{background:rgba(255,23,68,.08);border:1px solid rgba(255,23,68,.2);
+  border-radius:8px;padding:10px 14px;font-size:12px;color:#ff6b6b;
+  margin-bottom:18px;display:none;align-items:center;gap:8px}
+.error.show{display:flex}
+.error svg{flex-shrink:0;opacity:.8}
+
+/* Button */
+.btn{width:100%;padding:13px;background:#58a6ff;color:#000;font-family:inherit;
+  font-weight:700;font-size:13px;letter-spacing:2px;border:none;border-radius:8px;
+  cursor:pointer;transition:all .2s;margin-top:4px;position:relative;overflow:hidden}
+.btn:hover{background:#79b8ff;transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn:disabled{background:#21262d;color:#8b949e;cursor:not-allowed;transform:none}
+.btn-inner{display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* Spinner */
+.spinner{width:14px;height:14px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;
+  border-radius:50%;animation:spin .6s linear infinite;display:none}
+.spinner.show{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Divider */
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0 0}
+.divider-line{flex:1;height:1px;background:#21262d}
+.divider-txt{font-size:10px;color:#3d444d;letter-spacing:1px}
+
+/* Footer */
+.footer{text-align:center;margin-top:20px;font-size:11px;color:#3d444d}
+
+/* Rate limit info */
+.rate-info{display:flex;align-items:center;gap:6px;font-size:10px;color:#3d444d;
+  margin-top:14px;justify-content:center}
+.dot-green{width:5px;height:5px;border-radius:50%;background:#00e676;flex-shrink:0}
+
+/* Shake animation */
+@keyframes shake{0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-6px)} 40%{transform:translateX(6px)}
+  60%{transform:translateX(-4px)} 80%{transform:translateX(4px)}}
+.shake{animation:shake .4s ease}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo-wrap">
+    <div class="logo-icon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="1.5">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+    </div>
+    <div class="logo-txt">UG <span>CHECKLIST</span> v3</div>
+    <div class="logo-sub">PA SYSTEM — CHỨNG KHOÁN VIỆT NAM</div>
+  </div>
+
+  <div class="card" id="card">
+    <div class="error" id="errBox">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="errTxt"></span>
+    </div>
+
+    <div class="field">
+      <label>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+        Tên đăng nhập
+      </label>
+      <div class="input-wrap">
+        <input id="username" type="text" placeholder="username" autocomplete="username"
+               onkeydown="if(event.key==='Enter')document.getElementById('password').focus()">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        Mật khẩu
+      </label>
+      <div class="input-wrap">
+        <input id="password" type="password" placeholder="••••••••" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="toggle-pw" onclick="togglePw()" type="button" title="Hiện/ẩn mật khẩu">
+          <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <button class="btn" id="btnLogin" onclick="doLogin()">
+      <div class="btn-inner">
+        <div class="spinner" id="spinner"></div>
+        <span id="btnTxt">ĐĂNG NHẬP</span>
+      </div>
+    </button>
+
+    <div class="rate-info">
+      <div class="dot-green"></div>
+      <span>Bảo mật — Tối đa 5 lần thử / 15 phút</span>
+    </div>
+  </div>
+
+  <div class="footer">UG Checklist v3 &nbsp;·&nbsp; Chứng khoán Việt Nam</div>
+</div>
+
+<script>
+function togglePw(){
+  const inp = document.getElementById('password');
+  const ico = document.getElementById('eyeIcon');
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  ico.innerHTML = show
+    ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+}
+
+function showErr(msg){
+  const box = document.getElementById('errBox');
+  document.getElementById('errTxt').textContent = msg;
+  box.classList.add('show');
+  document.getElementById('card').classList.add('shake');
+  setTimeout(()=>document.getElementById('card').classList.remove('shake'), 400);
+}
+
+function hideErr(){
+  document.getElementById('errBox').classList.remove('show');
+}
+
+async function doLogin(){
+  const btn  = document.getElementById('btnLogin');
+  const spin = document.getElementById('spinner');
+  const txt  = document.getElementById('btnTxt');
+  const u    = document.getElementById('username').value.trim();
+  const p    = document.getElementById('password').value;
+
+  hideErr();
+  if(!u || !p){ showErr('Vui lòng nhập đầy đủ thông tin.'); return; }
+
+  btn.disabled = true;
+  spin.classList.add('show');
+  txt.textContent = 'ĐANG XÁC THỰC...';
+
+  try{
+    const res  = await fetch('/login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:u, password:p})
+    });
+    const data = await res.json();
+    if(data.ok){
+      txt.textContent = 'THÀNH CÔNG ✓';
+      btn.style.background = '#00e676';
+      setTimeout(()=>{ window.location.href = '/'; }, 500);
+    } else {
+      showErr(data.message || 'Đăng nhập thất bại.');
+      btn.disabled = false;
+      spin.classList.remove('show');
+      txt.textContent = 'ĐĂNG NHẬP';
+      document.getElementById('password').value = '';
+      document.getElementById('password').focus();
+    }
+  } catch(e){
+    showErr('Không kết nối được server. Thử lại sau.');
+    btn.disabled = false;
+    spin.classList.remove('show');
+    txt.textContent = 'ĐĂNG NHẬP';
+  }
+}
+
+window.onload = ()=>{ document.getElementById('username').focus(); };
+</script>
+</body>
+</html>
