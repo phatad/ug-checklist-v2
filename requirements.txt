@@ -8,3 +8,4 @@ beautifulsoup4
 packaging
 ipython
 yfinance
+bcrypt
