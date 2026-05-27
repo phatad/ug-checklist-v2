@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UG Checklist v2</title>
+<title>UG Checklist v3</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <style>
@@ -160,8 +160,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
 <div class="hdr">
   <div>
-    <div class="logo">UG <span>CHECKLIST</span> v2</div>
-    <div class="hdr-sub">PA System — Chứng khoán Việt Nam</div>
+    <div class="logo">UG <span>CHECKLIST</span> v3</div>
+    <div class="hdr-sub">PA System v3 — Chứng khoán Việt Nam</div>
   </div>
   <div class="dot"></div>
   <button class="menu-btn" onclick="toggleSidebar()">☰</button>
@@ -201,22 +201,22 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
             <select id="tf_ref"><option value="1W" selected>Tuần (1W)</option><option value="1D">Ngày (1D)</option></select>
           </div>
         </div>
-        <div class="field"><label>Độ nhạy swing</label><input id="swing_len" type="number" value="5" min="2" max="20"></div>
+        <div class="field"><label>Độ nhạy swing</label><input id="swing_len" type="number" value="3" min="2" max="10"></div>
         <div class="row2">
-          <div class="field"><label>Lookback KC/HT</label><input id="zone_len" type="number" value="20" min="5" max="200"></div>
-          <div class="field"><label>Độ rộng ATR</label><input id="zone_atr_mult" type="number" value="0.5" min="0.1" max="2" step="0.1"></div>
+          <div class="field"><label>Lookback KC/HT</label><input id="zone_len" type="number" value="50" min="10" max="300"></div>
+          <div class="field"><label>Độ rộng ATR</label><input id="zone_atr_mult" type="number" value="1.5" min="0.5" max="5" step="0.5"></div>
         </div>
         <div class="row2">
-          <div class="field"><label>Tỷ lệ thân</label><input id="body_ratio" type="number" value="0.60" min="0.4" max="0.9" step="0.05"></div>
-          <div class="field"><label>Tỷ lệ râu</label><input id="wick_ratio" type="number" value="0.50" min="0.3" max="0.8" step="0.05"></div>
+          <div class="field"><label>Tỷ lệ thân</label><input id="body_ratio" type="number" value="0.50" min="0.3" max="0.8" step="0.05"></div>
+          <div class="field"><label>Tỷ lệ râu</label><input id="wick_ratio" type="number" value="0.40" min="0.2" max="0.7" step="0.05"></div>
         </div>
-        <div class="field"><label>Độ nhạy ATR</label><input id="atr_mult" type="number" value="0.6" min="0.2" max="3" step="0.1"></div>
+        <div class="field"><label>Độ nhạy ATR</label><input id="atr_mult" type="number" value="0.3" min="0.1" max="2" step="0.1"></div>
         <div class="cbrow"><input id="use_volume" type="checkbox" checked><label for="use_volume">Lọc Volume</label><input id="vol_ma_len" type="number" value="20" min="5" max="50"></div>
         <div class="cbrow"><input id="use_rsi_div" type="checkbox" checked><label for="use_rsi_div">Phân kỳ RSI ẩn</label><input id="rsi_len" type="number" value="14" min="5" max="30"></div>
         <div class="field"><label>Vốn tài khoản (₫)</label><input id="account" type="number" value="100000000" step="10000000" min="1000000"></div>
         <div class="row2">
           <div class="field"><label>Rủi ro/lệnh (%)</label><input id="risk_pct" type="number" value="2.0" min="0.1" max="5" step="0.1"></div>
-          <div class="field"><label>Stoploss (%)</label><input id="sl_pct" type="number" value="2.0" min="0.3" max="20" step="0.1"></div>
+          <div class="field"><label>Stoploss (%) — CK ~3-7%</label><input id="sl_pct" type="number" value="5.0" min="1.0" max="30" step="0.5"></div>
         </div>
         <div class="field"><label>Giới hạn lỗ tháng (%)</label><input id="monthly_loss" type="number" value="6.0" min="1" max="20" step="0.5"></div>
       </div>
