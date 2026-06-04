@@ -143,6 +143,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 @keyframes spin{to{transform:rotate(360deg)}}
 .load-txt{color:var(--muted);font-size:11px}
 .welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:10px;font-family:var(--mono)}
+/* Timeframe buttons */
+.tf-bar{display:flex;gap:4px;padding:6px 8px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.tf-btn{padding:4px 12px;font-family:var(--mono);font-size:11px;font-weight:600;
+  color:var(--muted);background:var(--card);border:1px solid var(--border);
+  border-radius:4px;cursor:pointer;transition:all .15s;letter-spacing:1px}
+.tf-btn:hover{color:var(--text);border-color:var(--muted)}
+.tf-btn.active{color:#000;background:var(--accent);border-color:var(--accent)}
+.tf-label{font-family:var(--mono);font-size:10px;color:var(--muted);
+  display:flex;align-items:center;padding:0 6px}
 /* Mobile */
 .menu-btn{display:none;background:none;border:none;color:var(--accent);font-size:20px;cursor:pointer;padding:4px 8px}
 .overlay-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
@@ -282,6 +291,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
     <!-- Tab: Biểu đồ -->
     <div class="tab-pane" id="tabChart" style="display:none;flex-direction:column">
+      <div class="tf-bar" id="tfBar" style="display:none">
+        <span class="tf-label">Khung:</span>
+        <button class="tf-btn active" id="tfD" onclick="switchTf('1D')">D</button>
+        <button class="tf-btn" id="tfW" onclick="switchTf('1W')">W</button>
+        <span class="tf-label" style="margin-left:auto;font-size:9px" id="tfInfo">—</span>
+      </div>
       <div class="charts-wrap" id="chartsWrap">
         <div id="overlay" class="overlay hidden">
           <div style="font-size:32px">📈</div>
@@ -464,18 +479,23 @@ function stopRun(){
   btn.style.background = "";
 }
 
-async function analyzeOne(sym){
-  const p = getParams(sym);
+async function analyzeOne(sym, tf=null){
+  const useTf = tf || currentTf;
+  const cacheKey = sym + '_' + useTf;
+  const p = {...getParams(sym), tf_chart: useTf};
   try{
     const res  = await fetch("/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)});
     if(res.status===401){ window.location.href="/login-page"; return; }
     const data = await res.json();
     if(!data.error){
-      results[sym] = data;
+      results[cacheKey] = data;
+      results[sym] = data; // backward compat
     } else {
+      results[cacheKey] = {error: data.error};
       results[sym] = {error: data.error};
     }
   }catch(e){
+    results[cacheKey] = {error: "Không kết nối được server"};
     results[sym] = {error: "Không kết nối được server"};
   }
 }
@@ -507,20 +527,26 @@ function getParams(sym){
   };
 }
 
-async function selectSym(sym){
+async function selectSym(sym, tf=null){
   activeSym = sym;
+  // Nếu đổi tf → force refetch
+  const tfKey = sym + '_' + (tf || currentTf);
+  if(tf && tf !== currentTf){
+    currentTf = tf;
+  }
   renderWLList();
   renderOverview();
 
-  // Nếu chưa có data thì fetch
-  if(!results[sym]){
-    showChartLoading(true, `Đang lấy dữ liệu ${sym}...`);
-    await analyzeOne(sym);
+  // Fetch nếu chưa có hoặc tf thay đổi
+  const cacheKey = sym + '_' + currentTf;
+  if(!results[cacheKey]){
+    showChartLoading(true, `Đang lấy dữ liệu ${sym} (${currentTf})...`);
+    await analyzeOne(sym, currentTf);
     renderWLList();
     renderOverview();
   }
 
-  const data = results[sym];
+  const data = results[cacheKey] || results[sym];
   if(!data){ showChartLoading(false); return; }
 
   if(data.error){
@@ -589,6 +615,8 @@ function showSummary(s){
   document.getElementById("bMonthly").textContent=s.monthly_loss_vnd+"₫";
   document.getElementById("bDate").textContent=s.date;
   document.getElementById("bottomBar").style.display="flex";
+  document.getElementById("tfBar").style.display="flex";
+  document.getElementById("tfInfo").textContent = s.date;
 }
 
 // showSignals removed — signals now only in tab Chi tiết
@@ -648,10 +676,20 @@ function drawCharts(c, sym){
   const rBot={type:"scatter",x:c.dates,y:c.resist_bot,mode:"lines",line:{color:"rgba(255,23,68,0.2)",width:1},fill:"tonexty",fillcolor:"rgba(255,23,68,0.07)",name:"KC dưới"};
   const sTop={type:"scatter",x:c.dates,y:c.support_top,mode:"lines",line:{color:"rgba(0,230,118,0.2)",width:1},name:"HT trên"};
   const sBot={type:"scatter",x:c.dates,y:c.support_bot,mode:"lines",line:{color:"rgba(0,230,118,0.2)",width:1},fill:"tonexty",fillcolor:"rgba(0,230,118,0.07)",name:"HT dưới"};
-  const b4=c.bull_4.length?{type:"scatter",mode:"markers+text",name:"✅ LONG",x:c.bull_4.map(r=>r.date),y:c.bull_4.map(r=>r.low*.984),marker:{symbol:"triangle-up",size:12,color:"#00c853"},text:c.bull_4.map(()=>"▲"),textposition:"bottom center",textfont:{color:"#00c853",size:9}}:null;
-  const be4=c.bear_4.length?{type:"scatter",mode:"markers+text",name:"✅ SHORT",x:c.bear_4.map(r=>r.date),y:c.bear_4.map(r=>r.high*1.016),marker:{symbol:"triangle-down",size:12,color:"#d50000"},text:c.bear_4.map(()=>"▼"),textposition:"top center",textfont:{color:"#d50000",size:9}}:null;
-  const b3=c.bull_3.length?{type:"scatter",mode:"markers",name:"🟡 Theo dõi LONG",x:c.bull_3.map(r=>r.date),y:c.bull_3.map(r=>r.low*.991),marker:{symbol:"triangle-up",size:8,color:"#ffa000"}}:null;
-  const be3=c.bear_3.length?{type:"scatter",mode:"markers",name:"🟡 Theo dõi SHORT",x:c.bear_3.map(r=>r.date),y:c.bear_3.map(r=>r.high*1.009),marker:{symbol:"triangle-down",size:8,color:"#ff6d00"}}:null;
+  // Chỉ hiện tín hiệu ≥ 4/5 để không spam chart
+  const b4=c.bull_4.length?{type:"scatter",mode:"markers+text",name:"✅ LONG",
+    x:c.bull_4.map(r=>r.date),y:c.bull_4.map(r=>r.low*.983),
+    marker:{symbol:"triangle-up",size:14,color:"#00c853"},
+    text:c.bull_4.map(()=>"▲"),textposition:"bottom center",
+    textfont:{color:"#00c853",size:10}}:null;
+  const be4=c.bear_4.length?{type:"scatter",mode:"markers+text",name:"✅ SHORT",
+    x:c.bear_4.map(r=>r.date),y:c.bear_4.map(r=>r.high*1.017),
+    marker:{symbol:"triangle-down",size:14,color:"#d50000"},
+    text:c.bear_4.map(()=>"▼"),textposition:"top center",
+    textfont:{color:"#d50000",size:10}}:null;
+  // 3/5 ẩn hoàn toàn — quá nhiều noise
+  const b3=null;
+  const be3=null;
 
   const layoutBase={paper_bgcolor:"#080c10",plot_bgcolor:"#0d1117",font:{color:"#8b949e",family:"JetBrains Mono,monospace",size:10},legend:{orientation:"h",x:0,y:1.02,bgcolor:"rgba(0,0,0,0)",font:{size:9},xanchor:"left"},hovermode:"x unified",hoverlabel:{bgcolor:"#161b22",bordercolor:"#21262d",font:{size:10}}};
 
@@ -708,7 +746,20 @@ function toggleSidebar(){
 
 
 
-// Khởi động
+// ── Timeframe switch ────────────────────────────────────────
+let currentTf = '1D';
+
+function switchTf(tf){
+  if(!activeSym) return;
+  currentTf = tf;
+  // Update button states
+  document.getElementById('tfD').classList.toggle('active', tf==='1D');
+  document.getElementById('tfW').classList.toggle('active', tf==='1W');
+  // Re-fetch với timeframe mới
+  selectSym(activeSym, tf);
+}
+
+// ── Khởi động ────────────────────────────────────────────────
 renderWLList();
 renderOverview();
 
