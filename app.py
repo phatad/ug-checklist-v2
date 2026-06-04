@@ -148,8 +148,22 @@ def get_data(symbol, start, end=None, timeframe="1D"):
 def get_vnindex(start, end=None):
     """Lấy data VNINDEX — thử nhiều nguồn."""
     end = end or date.today().strftime("%Y-%m-%d")
-    # vnstock
-    for sym in ["VNINDEX", "VN-INDEX"]:
+
+    # 1. yfinance trước — reliable nhất
+    try:
+        import yfinance as yf
+        import socket; socket.setdefaulttimeout(20)
+        df = _normalize(yf.download("^VNINDEX", start=start, end=end,
+                                    auto_adjust=True, progress=False,
+                                    timeout=15).reset_index())
+        if not df.empty and len(df) > 5:
+            log.info(f"VNINDEX yfinance OK: {len(df)} nến")
+            return df
+    except Exception as e:
+        log.warning(f"VNINDEX yfinance: {e}")
+
+    # 2. vnstock fallback
+    for sym in ["VNINDEX", "VN-INDEX", "HOSE:VNINDEX"]:
         try:
             from vnstock import stock_historical_data
             import inspect
@@ -159,22 +173,23 @@ def get_vnindex(start, end=None):
                   stock_historical_data(sym, start, end, interval="1D", asset_type="index"))
             df = _normalize(df)
             if not df.empty:
-                log.info(f"VNINDEX vnstock OK: {len(df)} nến")
+                log.info(f"VNINDEX vnstock OK ({sym}): {len(df)} nến")
                 return df
         except: pass
-    # yfinance
+
+    # 3. vnstock3 fallback
     try:
-        import yfinance as yf
-        import socket; socket.setdefaulttimeout(20)
-        df = _normalize(yf.download("^VNINDEX", start=start, end=end,
-                                    auto_adjust=True, progress=False,
-                                    timeout=15).reset_index())
+        from vnstock3 import Vnstock
+        df = Vnstock().stock(symbol="VNINDEX", source="VCI").quote.history(
+            start=start, end=end, interval="1D")
+        df = _normalize(df)
         if not df.empty:
-            log.info(f"VNINDEX yfinance OK: {len(df)} nến")
+            log.info(f"VNINDEX vnstock3 OK: {len(df)} nến")
             return df
     except Exception as e:
-        log.warning(f"VNINDEX yfinance: {e}")
-    log.warning("Không lấy được VNINDEX → DK4 sẽ bị bỏ qua")
+        log.warning(f"VNINDEX vnstock3: {e}")
+
+    log.warning("Không lấy được VNINDEX → DK4 N/A")
     return pd.DataFrame()
 
 # ═══════════════════════════════════════════════════════════════
@@ -513,8 +528,8 @@ def analyze():
             "resist_bot":  [safe(a-b) for a,b in zip(chart_df["resist"], chart_df["zone_w"])],
             "support_top": [safe(a+b) for a,b in zip(chart_df["support"], chart_df["zone_w"])],
             "support_bot": [safe(a-b) for a,b in zip(chart_df["support"], chart_df["zone_w"])],
-            "bull_4": sig_recs(chart_df["score"]>=4 & chart_df["bull_signal"],"low"),
-            "bear_4": sig_recs(chart_df["score"]>=4 & chart_df["bear_signal"],"high"),
+            "bull_4": sig_recs((chart_df["score"]>=4) & chart_df["bull_signal"],"low"),
+            "bear_4": sig_recs((chart_df["score"]>=4) & chart_df["bear_signal"],"high"),
             "bull_3": sig_recs((chart_df["score"]==3) & chart_df["bull_signal"],"low"),
             "bear_3": sig_recs((chart_df["score"]==3) & chart_df["bear_signal"],"high"),
         }
