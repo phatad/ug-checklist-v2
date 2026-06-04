@@ -484,9 +484,10 @@ def analyze():
         }
 
         # Lấy data song song
-        df_main = get_data(symbol, start, timeframe="1D")
-        df_htf  = get_data(symbol, start, timeframe=tf_ref)
-        df_vni  = get_vnindex(start)   # DK4
+        tf_chart = data.get("tf_chart", "1D")  # timeframe hiển thị chart
+        df_main  = get_data(symbol, start, timeframe=tf_chart)
+        df_htf   = get_data(symbol, start, timeframe=tf_ref)
+        df_vni   = get_vnindex(start)   # DK4
 
         if df_main.empty:
             return jsonify({"error": f"Không có dữ liệu cho '{symbol}'"}), 400
@@ -567,6 +568,7 @@ def analyze():
             "trend_src":  row["trend_src"],
             "cond4_txt":  rs_txt,
             "cond5_txt":  f"{ema_align} | {rr_txt}",
+            "tf_chart":   tf_chart,
         }
 
         sig_df  = result[result["bull_signal"]|result["bear_signal"]].tail(5).iloc[::-1]
