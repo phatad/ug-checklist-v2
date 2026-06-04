@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UG Checklist v3</title>
+<title>UG Checklist v4</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <style>
@@ -173,8 +173,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
 <div class="hdr">
   <div>
-    <div class="logo">UG <span>CHECKLIST</span> v3</div>
-    <div class="hdr-sub">PA System v3 — Chứng khoán Việt Nam</div>
+    <div class="logo">UG <span>CHECKLIST</span> v4</div>
+    <div class="hdr-sub">PA System v4 — Chứng khoán Việt Nam</div>
   </div>
   <div class="dot"></div>
   <a href="/logout" style="font-family:var(--mono);font-size:10px;color:var(--muted);
@@ -382,10 +382,11 @@ function renderWLList(){
     const score = r && r.summary ? r.summary.score : null;
     const hasError = r && r.error;
     const isActive = sym === activeSym;
+    const scoreMax = (r && r.summary && r.summary.score_max) ? r.summary.score_max : 5;
     const scoreHtml = hasError
       ? `<span style="color:var(--red);font-size:9px">Lỗi</span>`
       : score !== null
-        ? `<span class="wl-score" style="color:${SC[score]}">${score}/4</span> <span class="wl-action">${ACTION_SHORT[score]}</span>`
+        ? `<span class="wl-score" style="color:${SC[Math.min(score,4)]}">${score}/${scoreMax}</span> <span class="wl-action">${ACTION_SHORT[Math.min(score,4)]}</span>`
         : `<span style="color:var(--muted);font-size:10px">—</span>`;
     return `<div class="wl-item${isActive?' active':''}" onclick="selectSym('${sym}')">
       <span class="wl-sym" style="color:${isActive?'var(--accent)':'var(--text)'}">${sym}</span>
@@ -427,7 +428,7 @@ function renderOverview(){
     return `<tr class="${isActive?'active-row':''}" onclick="selectSym('${sym}')">
       <td style="font-weight:700;color:${isActive?'var(--accent)':'var(--text)'};font-family:var(--mono)">${sym}</td>
       <td style="font-family:var(--mono)">${s.close}₫</td>
-      <td><span style="color:${col};font-weight:700;font-family:var(--mono)">${s.score}/4</span></td>
+      <td><span style="color:${col};font-weight:700;font-family:var(--mono)">${s.score}/${s.score_max||5}</span></td>
       <td style="color:${col};font-weight:600">${ACTIONS[s.score]}</td>
       <td style="color:var(--muted);font-size:10px">${s.direction}</td>
       <td style="color:var(--muted);font-size:10px">${s.cond3_txt}</td>
@@ -687,9 +688,12 @@ function drawCharts(c, sym){
     marker:{symbol:"triangle-down",size:14,color:"#d50000"},
     text:c.bear_4.map(()=>"▼"),textposition:"top center",
     textfont:{color:"#d50000",size:10}}:null;
-  // 3/5 ẩn hoàn toàn — quá nhiều noise
-  const b3=null;
-  const be3=null;
+  const b3=c.bull_3.length?{type:"scatter",mode:"markers",name:"🟡 Theo dõi LONG",
+    x:c.bull_3.map(r=>r.date),y:c.bull_3.map(r=>r.low*.991),
+    marker:{symbol:"triangle-up",size:8,color:"#ffa000"}}:null;
+  const be3=c.bear_3.length?{type:"scatter",mode:"markers",name:"🟡 Theo dõi SHORT",
+    x:c.bear_3.map(r=>r.date),y:c.bear_3.map(r=>r.high*1.009),
+    marker:{symbol:"triangle-down",size:8,color:"#ff6d00"}}:null;
 
   const layoutBase={paper_bgcolor:"#080c10",plot_bgcolor:"#0d1117",font:{color:"#8b949e",family:"JetBrains Mono,monospace",size:10},legend:{orientation:"h",x:0,y:1.02,bgcolor:"rgba(0,0,0,0)",font:{size:9},xanchor:"left"},hovermode:"x unified",hoverlabel:{bgcolor:"#161b22",bordercolor:"#21262d",font:{size:10}}};
 
