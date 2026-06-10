@@ -143,6 +143,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 @keyframes spin{to{transform:rotate(360deg)}}
 .load-txt{color:var(--muted);font-size:11px}
 .welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:10px;font-family:var(--mono)}
+/* Version selector */
+.ver-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+.ver-label{font-size:9px;font-family:var(--mono);color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.ver-select{background:var(--card);border:1px solid var(--border);border-radius:5px;color:var(--accent);font-family:var(--mono);font-size:12px;font-weight:700;padding:4px 8px;outline:none;cursor:pointer}
+.ver-badge{font-size:9px;font-family:var(--mono);color:var(--muted);padding:3px 7px;border:1px solid var(--border);border-radius:3px;margin-left:auto}
+
 /* Timeframe buttons */
 .tf-bar{display:flex;gap:4px;padding:6px 8px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
 .tf-btn{padding:4px 12px;font-family:var(--mono);font-size:11px;font-weight:600;
@@ -189,6 +195,16 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 <div class="layout">
   <!-- SIDEBAR -->
   <aside class="sidebar">
+
+    <!-- Version selector -->
+    <div class="ver-bar">
+      <span class="ver-label">Version</span>
+      <select class="ver-select" id="versionSelect" onchange="switchVersion(this.value)">
+        <option value="v4" selected>v4</option>
+        <option value="v5">v5</option>
+      </select>
+      <span class="ver-badge" id="verBadge">v4 — RS 0%</span>
+    </div>
 
     <!-- Watchlist -->
     <div class="sec">
@@ -483,7 +499,7 @@ function stopRun(){
 async function analyzeOne(sym, tf=null){
   const useTf = tf || currentTf;
   const cacheKey = sym + '_' + useTf;
-  const p = {...getParams(sym), tf_chart: useTf};
+  const p = {...getParams(sym), tf_chart: useTf, version: currentVersion};
   try{
     const res  = await fetch("/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)});
     if(res.status===401){ window.location.href="/login-page"; return; }
@@ -766,6 +782,24 @@ function switchTf(tf){
 // ── Khởi động ────────────────────────────────────────────────
 renderWLList();
 renderOverview();
+
+// ── Version switch ──────────────────────────────────────────
+let currentVersion = 'v4';
+const VER_CFG = {
+  v4: { rs_thresh: 0.0, badge: 'v4 — RS 0%' },
+  v5: { rs_thresh: 1.0, badge: 'v5 — RS 1%' }
+};
+function switchVersion(ver){
+  currentVersion = ver;
+  const cfg = VER_CFG[ver];
+  const el = document.getElementById('rs_thresh');
+  if(el) el.value = cfg.rs_thresh;
+  document.getElementById('verBadge').textContent = cfg.badge;
+  results = {};
+  renderWLList();
+  renderOverview();
+  if(activeSym) selectSym(activeSym);
+}
 
 // Resize charts khi cửa sổ thay đổi
 window.addEventListener("resize", ()=>{
