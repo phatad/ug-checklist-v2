@@ -280,10 +280,18 @@ def run_checklist(df_ltf, df_htf, df_vni, cfg):
     df["resist"]      = df["high"].shift(1).rolling(ZLEN).max()
     df["support"]     = df["low"].shift(1).rolling(ZLEN).min()
     df["zone_w"]      = df["atr14"] * ZATR
-    df["in_resist"]   = ((df["close"] >= df["resist"] - df["zone_w"]) &
-                         (df["close"] <= df["resist"] + df["zone_w"]))
-    df["in_support"]  = ((df["close"] >= df["support"] - df["zone_w"]) &
-                         (df["close"] <= df["support"] + df["zone_w"]))
+    version = cfg.get("version","v4")
+    if version == "v5":
+        # v5 FIX: tiếp cận KC từ dưới lên, HT từ trên xuống
+        df["in_resist"]  = ((df["close"] >= df["resist"] - df["zone_w"]) &
+                            (df["close"] <= df["resist"]))
+        df["in_support"] = ((df["close"] <= df["support"] + df["zone_w"]) &
+                            (df["close"] >= df["support"]))
+    else:
+        df["in_resist"]   = ((df["close"] >= df["resist"] - df["zone_w"]) &
+                             (df["close"] <= df["resist"] + df["zone_w"]))
+        df["in_support"]  = ((df["close"] >= df["support"] - df["zone_w"]) &
+                             (df["close"] <= df["support"] + df["zone_w"]))
     df["near_resist"] = df["in_resist"]
     df["near_support"]= df["in_support"]
     df["cond2_ok"]    = ((is_up & df["in_support"]) |
@@ -325,15 +333,28 @@ def run_checklist(df_ltf, df_htf, df_vni, cfg):
     df["t1_dn"]  = (s("is_bull",2) & s("big_body",2) & s("sig_big",2) &
                     s("sig_big",1) & s("lw_up",1) &
                     df["is_bear"] & df["big_body"] & df["sig_big"] & vc)
-    # v4: T2 thêm context close[1] < close[3]
-    df["t2_up"]  = (s("is_bear",1) & s("sig_big",1) &
-                    df["sig_big"] & (df["body"] < s("body",1) * 0.85) &
-                    (df["lw_dn"] | df["is_bull"]) &
-                    (s("close",1) < s("close",3)) & vc)
-    df["t2_dn"]  = (s("is_bull",1) & s("sig_big",1) &
-                    df["sig_big"] & (df["body"] < s("body",1) * 0.85) &
-                    (df["lw_up"] | df["is_bear"]) &
-                    (s("close",1) > s("close",3)) & vc)
+    if version == "v5":
+        # v5: T2 dùng 3 nến bé dần + close[3]<close[5]
+        df["t2_up"] = (s("is_bear",3) & s("sig_big",3) &
+                       s("is_bear",2) & s("sig_big",2) & (s("body",2) < s("body",3)*0.85) &
+                       s("sig_big",1) & (df["body"] < s("body",2)*0.85) &
+                       (s("close",3) < s("close",5)) &
+                       (df["lw_dn"] | df["is_bull"]) & vc)
+        df["t2_dn"] = (s("is_bull",3) & s("sig_big",3) &
+                       s("is_bull",2) & s("sig_big",2) & (s("body",2) < s("body",3)*0.85) &
+                       s("sig_big",1) & (df["body"] < s("body",2)*0.85) &
+                       (s("close",3) > s("close",5)) &
+                       (df["lw_up"] | df["is_bear"]) & vc)
+    else:
+        # v4: T2 đơn giản hơn
+        df["t2_up"]  = (s("is_bear",1) & s("sig_big",1) &
+                        df["sig_big"] & (df["body"] < s("body",1) * 0.85) &
+                        (df["lw_dn"] | df["is_bull"]) &
+                        (s("close",1) < s("close",3)) & vc)
+        df["t2_dn"]  = (s("is_bull",1) & s("sig_big",1) &
+                        df["sig_big"] & (df["body"] < s("body",1) * 0.85) &
+                        (df["lw_up"] | df["is_bear"]) &
+                        (s("close",1) > s("close",3)) & vc)
     df["t3_up"]  = (s("lw_dn",1) & s("sig_big",1) &
                     df["lw_dn"] & df["sig_big"] &
                     (df["low"] < s("low",1)) & (df["close"] > s("close",1)) & vc)
@@ -344,10 +365,17 @@ def run_checklist(df_ltf, df_htf, df_vni, cfg):
                         df["lw_up"] & df["sig_big"] & vfb)
     df["fb_support"] = ((df["low"] < df["support"]) & (df["close"] > df["support"]) &
                         df["lw_dn"] & df["sig_big"] & vfb)
-    df["hammer_up"]   = (df["lw_dn"] & df["sig_big"] &
-                         (df["wick_dn"] >= df["body"] * 2.0) & vc)
-    df["shooting_dn"] = (df["lw_up"] & df["sig_big"] &
-                         (df["wick_up"] >= df["body"] * 2.0) & vc)
+    if version == "v5":
+        # v5: Hammer chỉ tại HT, Shooting Star chỉ tại KC
+        df["hammer_up"]   = (df["in_support"] & df["lw_dn"] & df["sig_big"] &
+                             (df["wick_dn"] >= df["body"] * 2.0) & vc)
+        df["shooting_dn"] = (df["in_resist"]  & df["lw_up"] & df["sig_big"] &
+                             (df["wick_up"] >= df["body"] * 2.0) & vc)
+    else:
+        df["hammer_up"]   = (df["lw_dn"] & df["sig_big"] &
+                             (df["wick_dn"] >= df["body"] * 2.0) & vc)
+        df["shooting_dn"] = (df["lw_up"] & df["sig_big"] &
+                             (df["wick_up"] >= df["body"] * 2.0) & vc)
 
     df["bull_signal"] = (df["t1_up"] | df["t1s_up"] | df["t2_up"] | df["t3_up"] |
                          df["fb_support"] | df["hidden_div_bull"] | df["hammer_up"])
@@ -490,7 +518,9 @@ def analyze():
             "use_rsi_div":   bool(data.get("use_rsi_div", True)),
             "rsi_len":       int(data.get("rsi_len", 14)),
             "rs_len":        int(data.get("rs_len", 20)),            # v4
-            "rs_thresh":     float(data.get("rs_thresh", 0.0)),      # v4
+            "rs_thresh":     float(data.get("rs_thresh",
+                               1.0 if data.get("version")=="v5" else 0.0)),
+            "version":       data.get("version", "v4"),
             "rr_min":        float(data.get("rr_min", 2.0)),         # v4
             "account":       float(data.get("account", 100_000_000)),
             "risk_pct":      float(data.get("risk_pct", 2.0)),
@@ -581,6 +611,7 @@ def analyze():
             "rr_value":   f"{rr_val:.2f}:1" if rr_val else "N/A",
             "monthly_loss_vnd": f"{cfg['account']*cfg['monthly_loss']/100:,.0f}",
             "trend_src":  row["trend_src"],
+            "version":    cfg.get("version","v4"),
             "cond4_txt":  rs_txt,
             "cond5_txt":  f"{ema_align} | {rr_txt}",
             "tf_chart":   tf_chart,
