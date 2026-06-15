@@ -518,9 +518,8 @@ def analyze():
             "use_rsi_div":   bool(data.get("use_rsi_div", True)),
             "rsi_len":       int(data.get("rsi_len", 14)),
             "rs_len":        int(data.get("rs_len", 20)),            # v4
-            "rs_thresh":     float(data.get("rs_thresh",
-                               1.0 if data.get("version")=="v5" else 0.0)),
-            "version":       data.get("version", "v4"),
+            "rs_thresh":     float(data.get("rs_thresh", 1.0)),
+            "version":       data.get("version", "v5"),
             "rr_min":        float(data.get("rr_min", 2.0)),         # v4
             "account":       float(data.get("account", 100_000_000)),
             "risk_pct":      float(data.get("risk_pct", 2.0)),
