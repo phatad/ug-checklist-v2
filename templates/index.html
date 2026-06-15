@@ -73,7 +73,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 /* Main panel */
 .main{display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden}
 /* Score bar */
-.score-bar{display:grid;grid-template-columns:repeat(5,1fr) 150px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+.score-bar{display:grid;grid-template-columns:repeat(3,1fr) 150px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
 .cond{background:var(--surface);padding:7px 10px;border-right:1px solid var(--border);transition:background .2s;min-width:0}
 .cond.ok{background:rgba(0,230,118,.06)}
 .cond.fail{background:rgba(255,23,68,.04)}
@@ -259,10 +259,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <!-- Score bar -->
     <div class="score-bar" id="scoreBar">
       <div class="cond" id="c1"><div class="cond-lbl">ĐIỀU KIỆN 1</div><div class="cond-ico">⬜</div><div class="cond-txt">Xu hướng rõ</div></div>
-      <div class="cond" id="c2"><div class="cond-lbl">ĐIỀU KIỆN 2</div><div class="cond-ico">⬜</div><div class="cond-txt">Tại KC/HT</div></div>
+      <div class="cond" id="c2"><div class="cond-lbl">ĐIỀU KIỆN 2</div><div class="cond-ico">⬜</div><div class="cond-txt">KC/HT + R:R</div></div>
       <div class="cond" id="c3"><div class="cond-lbl">ĐIỀU KIỆN 3</div><div class="cond-ico">⬜</div><div class="cond-txt">Nến đảo chiều</div></div>
-      <div class="cond" id="c4"><div class="cond-lbl">ĐIỀU KIỆN 4</div><div class="cond-ico">⬜</div><div class="cond-txt">RS vs VNI</div></div>
-      <div class="cond" id="c5"><div class="cond-lbl">ĐIỀU KIỆN 5</div><div class="cond-ico">⬜</div><div class="cond-txt">EMA + R:R</div></div>
       <div class="action">
         <div class="a-score" id="aScore" style="color:var(--muted)">—</div>
         <div class="a-label" id="aLabel" style="color:var(--muted)">Chọn mã</div>
@@ -333,9 +331,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 </div>
 
 <script>
-const SC = {0:"#ff1744",1:"#ff1744",2:"#ff6d00",3:"#ffa000",4:"#00c853"};
-const ACTIONS = ["🔴 ĐỨNG NGOÀI","🔴 ĐỨNG NGOÀI","🟠 CHỜ THÊM","🟡 THEO DÕI SÁT","🟢 VÀO LỆNH"];
-const ACTION_SHORT = ["❌","❌","🟠","🟡","🟢"];
+const SC = {0:"#ff1744",1:"#ff1744",2:"#ffa000",3:"#00c853"};
+const ACTIONS = ["🔴 ĐỨNG NGOÀI","🔴 ĐỨNG NGOÀI","🟡 THEO DÕI SÁT","🟢 VÀO LỆNH"];
+const ACTION_SHORT = ["❌","❌","🟡","🟢"];
 
 // ── Watchlist state ────────────────────────────────────────────
 let watchlist = JSON.parse(localStorage.getItem("ug_wl")||"[]");
@@ -519,10 +517,8 @@ function getParams(sym){
     risk_pct:      +document.getElementById("risk_pct").value,
     sl_pct:        +document.getElementById("sl_pct").value,
     monthly_loss:  +document.getElementById("monthly_loss").value,
-    vol_bull_mult: +(document.getElementById("vol_bull_mult")||{value:1.2}).value,
+    vol_sig_mult: +(document.getElementById("vol_bull_mult")||{value:1.2}).value,
     vol_fb_mult:   +(document.getElementById("vol_fb_mult")||{value:1.5}).value,
-    rs_len:        +(document.getElementById("rs_len")||{value:20}).value,
-    rs_thresh:     +(document.getElementById("rs_thresh")||{value:0}).value,
     rr_min:        +(document.getElementById("rr_min")||{value:2.0}).value,
   };
 }
@@ -601,9 +597,7 @@ function showSummary(s){
   setCond("c1",s.cond1,"1",s.cond1_txt);
   setCond("c2",s.cond2,"2",s.cond2_txt);
   setCond("c3",s.cond3,"3",s.cond3_txt);
-  setCond("c4",s.cond4,"4",s.cond4_txt,s.cond4_na);
-  setCond("c5",s.cond5,"5",s.cond5_txt);
-  document.getElementById("aScore").textContent=s.score+"/"+s.score_max;
+  document.getElementById("aScore").textContent=s.score+"/"+(s.score_max||3);
   document.getElementById("aScore").style.color=col;
   document.getElementById("aLabel").textContent=s.action;
   document.getElementById("aLabel").style.color=col;
@@ -633,9 +627,9 @@ function renderDetail(s, sigs){
     </div>
     <div class="detail-section">
       <div class="detail-section-title">✅ 4 Điều kiện</div>
-      ${[["1","Xu hướng rõ","cond1","cond1_txt"],["2","Tại vùng KC/HT","cond2","cond2_txt"],
-         ["3","Nến đảo chiều","cond3","cond3_txt"],["4","RS vs VNINDEX","cond4","cond4_txt"],
-         ["5","EMA + R:R","cond5","cond5_txt"]].map(([n,name,ck,ct])=>`
+      ${[["1","Xu hướng rõ","cond1","cond1_txt"],
+         ["2","KC/HT + R:R","cond2","cond2_txt"],
+         ["3","Nến đảo chiều","cond3","cond3_txt"]].map(([n,name,ck,ct])=>`
       <div class="detail-cond">
         <div class="detail-cond-ico">${s[ck]?"✅":"❌"}</div>
         <div><div class="detail-cond-name">Điều kiện ${n} — ${name}</div>
@@ -644,9 +638,9 @@ function renderDetail(s, sigs){
     </div>
     <div class="detail-section">
       <div class="detail-section-title">📌 Chỉ số bổ sung</div>
+      <div class="detail-row"><span class="detail-label">— 2a Vùng KC/HT</span><span class="detail-val">${s.cond2a?"✅":"❌"} ${s.cond2a_txt||""}</span></div>
+      <div class="detail-row"><span class="detail-label">— 2b R:R</span><span class="detail-val">${s.cond2b?"✅":"❌"} ${s.cond2b_txt||""}</span></div>
       <div class="detail-row"><span class="detail-label">RSI(14)</span><span class="detail-val">${s.rsi} — ${s.rsi_signal}</span></div>
-      <div class="detail-row"><span class="detail-label">RS vs VNINDEX</span><span class="detail-val">${s.rs_value}</span></div>
-      <div class="detail-row"><span class="detail-label">R:R hiện tại</span><span class="detail-val">${s.rr_value}</span></div>
       <div class="detail-row"><span class="detail-label">Lỗ tối đa/tháng</span><span class="detail-val" style="color:var(--red)">${s.monthly_loss_vnd}₫</span></div>
     </div>
     <div class="detail-section">
