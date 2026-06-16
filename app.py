@@ -141,10 +141,60 @@ def get_data(symbol, start, end=None, timeframe="1D"):
 
     raise RuntimeError(f"Không lấy được data cho '{symbol}'.")
 
+def get_intraday_h4(symbol, start, end=None):
+    """Lấy data khung H4 cho DK3. Thử yfinance 4h → vnstock 1H gộp → fallback D."""
+    end = end or date.today().strftime("%Y-%m-%d")
+
+    # 1. yfinance 4h (đúng khung H4)
+    try:
+        import yfinance as yf, socket
+        socket.setdefaulttimeout(20)
+        ticker = symbol+".VN" if not symbol.endswith(".VN") else symbol
+        df = yf.download(ticker, period="60d", interval="4h",
+                         progress=False, timeout=15)
+        df = _normalize(df.reset_index())
+        if not df.empty and len(df) > 20:
+            log.info(f"H4 yfinance OK: {symbol} {len(df)} nến")
+            return df, "H4"
+    except Exception as e:
+        log.warning(f"H4 yfinance: {e}")
+
+    # 2. vnstock 1H rồi gộp 4 nến thành H4
+    try:
+        from vnstock import stock_historical_data
+        import inspect
+        sig = inspect.signature(stock_historical_data)
+        df = (stock_historical_data(symbol, start, end, resolution="1H", type="stock")
+              if "resolution" in sig.parameters else
+              stock_historical_data(symbol, start, end, interval="1H", asset_type="stock"))
+        df = _normalize(df)
+        if not df.empty and len(df) > 20:
+            # Gộp 1H → 4H: lấy mỗi 4 nến
+            df = df.set_index("date")
+            agg = df.resample("4H").agg({"open":"first","high":"max",
+                                          "low":"min","close":"last","volume":"sum"}).dropna()
+            agg = agg.reset_index()
+            if not agg.empty:
+                log.info(f"H4 vnstock(1H→4H) OK: {symbol} {len(agg)} nến")
+                return agg, "H4(1H)"
+    except Exception as e:
+        log.warning(f"H4 vnstock 1H: {e}")
+
+    # 3. Fallback: dùng khung ngày
+    try:
+        df = get_data(symbol, start, end, timeframe="1D")
+        if not df.empty:
+            log.info(f"H4 fallback Daily: {symbol} {len(df)} nến")
+            return df, "D(fallback)"
+    except Exception as e:
+        log.warning(f"H4 fallback: {e}")
+
+    return pd.DataFrame(), "N/A"
+
 # ═══════════════════════════════════════════════════════════════
 #  CHECKLIST v6
 # ═══════════════════════════════════════════════════════════════
-def run_checklist(df_ltf, df_htf, cfg):
+def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     SWING   = cfg["swing_len"]
     ZLEN    = cfg["zone_len"]
     ZATR    = cfg["zone_atr_mult"]
@@ -255,7 +305,82 @@ def run_checklist(df_ltf, df_htf, cfg):
     # DK2 = vùng đúng VÀ R:R đủ
     df["cond2_ok"] = df["cond2_zone"] & df["cond2_rr"]
 
-    # ── DK3: Nến đảo chiều (tất cả dùng shift = nến đã đóng) ─
+    # ── DK3: Nến đảo chiều trên khung H4 (df_entry) ──────────
+    # Nếu có df_entry (H4) → tính tín hiệu nến trên đó
+    # Kết quả tín hiệu mới nhất gắn vào nến cuối của df chính
+    ENTRY = df_entry if (df_entry is not None and not df_entry.empty and len(df_entry) > 10) else df
+    de = ENTRY.copy()
+    de["atr14_e"]   = calc_atr(de, 14)
+    de["body_e"]    = (de["close"] - de["open"]).abs()
+    de["range_e"]   = de["high"] - de["low"]
+    de["wick_up_e"] = de["high"] - de[["open","close"]].max(axis=1)
+    de["wick_dn_e"] = de[["open","close"]].min(axis=1) - de["low"]
+    de["is_bull_e"] = de["close"] > de["open"]
+    de["is_bear_e"] = de["close"] < de["open"]
+    rng_e = de["range_e"].replace(0, np.nan)
+    de["big_body_e"] = (de["range_e"] > 0) & (de["body_e"] / rng_e >= BODY)
+    de["lw_up_e"]    = (de["range_e"] > 0) & (de["wick_up_e"] / rng_e >= WICK)
+    de["lw_dn_e"]    = (de["range_e"] > 0) & (de["wick_dn_e"] / rng_e >= WICK)
+    de["sig_big_e"]  = de["range_e"] >= de["atr14_e"] * ATRM
+    de["vol_ma_e"]   = de["volume"].rolling(VMALEN).mean()
+    de["vol_sig_ok_e"] = (~UVOL) | (de["volume"].shift(1) >= de["vol_ma_e"].shift(1) * VSMULT)
+    de["vol_fb_ok_e"]  = (~UVOL) | (de["volume"].shift(1) <= de["vol_ma_e"].shift(1) * VFMULT)
+
+    def se(col, i): return de[col].shift(i)
+    vse  = de["vol_sig_ok_e"]
+    vfbe = de["vol_fb_ok_e"]
+
+    # Tín hiệu nến trên khung entry
+    de["t1s_up_e"] = (se("is_bear_e",2) & se("big_body_e",2) & se("sig_big_e",2) &
+                      se("is_bull_e",1) & se("big_body_e",1) & se("sig_big_e",1) &
+                      (se("close",1) > se("open",2)) & vse)
+    de["t1s_dn_e"] = (se("is_bull_e",2) & se("big_body_e",2) & se("sig_big_e",2) &
+                      se("is_bear_e",1) & se("big_body_e",1) & se("sig_big_e",1) &
+                      (se("close",1) < se("open",2)) & vse)
+    de["t1_up_e"] = (se("is_bear_e",3) & se("big_body_e",3) & se("sig_big_e",3) &
+                     se("is_bull_e",2) & se("lw_dn_e",2)   & se("sig_big_e",2) &
+                     se("is_bull_e",1) & se("big_body_e",1) & se("sig_big_e",1) & vse)
+    de["t1_dn_e"] = (se("is_bull_e",3) & se("big_body_e",3) & se("sig_big_e",3) &
+                     se("is_bear_e",2) & se("lw_up_e",2)   & se("sig_big_e",2) &
+                     se("is_bear_e",1) & se("big_body_e",1) & se("sig_big_e",1) & vse)
+    de["t2_up_e"] = (se("is_bear_e",3) & se("sig_big_e",3) &
+                     se("is_bear_e",2) & se("sig_big_e",2) & (se("body_e",2) < se("body_e",3)*0.85) &
+                     se("sig_big_e",1) & (se("body_e",1) < se("body_e",2)*0.85) &
+                     (se("close",3) < se("close",5)) &
+                     (se("lw_dn_e",1) | se("is_bull_e",1)) & vse)
+    de["t2_dn_e"] = (se("is_bull_e",3) & se("sig_big_e",3) &
+                     se("is_bull_e",2) & se("sig_big_e",2) & (se("body_e",2) < se("body_e",3)*0.85) &
+                     se("sig_big_e",1) & (se("body_e",1) < se("body_e",2)*0.85) &
+                     (se("close",3) > se("close",5)) &
+                     (se("lw_up_e",1) | se("is_bear_e",1)) & vse)
+    de["t3_up_e"] = (se("lw_dn_e",2) & se("sig_big_e",2) &
+                     se("lw_dn_e",1) & se("sig_big_e",1) &
+                     (se("low",1) < se("low",2)) & (se("close",1) > se("close",2)) & vse)
+    de["t3_dn_e"] = (se("lw_up_e",2) & se("sig_big_e",2) &
+                     se("lw_up_e",1) & se("sig_big_e",1) &
+                     (se("high",1) > se("high",2)) & (se("close",1) < se("close",2)) & vse)
+
+    # Lấy tín hiệu của nến entry mới nhất
+    last_e = de.iloc[-1]
+    entry_bull = bool(last_e.get("t3_up_e",False) or last_e.get("t1_up_e",False) or
+                      last_e.get("t1s_up_e",False) or last_e.get("t2_up_e",False))
+    entry_bear = bool(last_e.get("t3_dn_e",False) or last_e.get("t1_dn_e",False) or
+                      last_e.get("t1s_dn_e",False) or last_e.get("t2_dn_e",False))
+    def entry_sig_name():
+        if entry_bull:
+            if last_e.get("t3_up_e"):  return "🎯 T3 SL-Hunter ↑"
+            if last_e.get("t1_up_e"):  return "T1 Đảo Chiều ↑"
+            if last_e.get("t1s_up_e"): return "T1S Đảo Chiều ↑"
+            if last_e.get("t2_up_e"):  return "T2 Yếu Dần ↑"
+        if entry_bear:
+            if last_e.get("t3_dn_e"):  return "🎯 T3 SL-Hunter ↓"
+            if last_e.get("t1_dn_e"):  return "T1 Đảo Chiều ↓"
+            if last_e.get("t1s_dn_e"): return "T1S Đảo Chiều ↓"
+            if last_e.get("t2_dn_e"):  return "T2 Yếu Dần ↓"
+        return "—"
+    entry_signal_name = entry_sig_name()
+
+    # ── DK3 trên khung chính (cho chart lịch sử) ─────────────
     df["rsi"]    = calc_rsi(df["close"], RSILEN)
     df["rsi_ph"] = find_pivot_high(df["rsi"],   SWING, SWING)
     df["rsi_pl"] = find_pivot_low(df["rsi"],    SWING, SWING)
@@ -332,9 +457,19 @@ def run_checklist(df_ltf, df_htf, cfg):
     df["bear_signal"] = (df["t3_dn"] | df["t1_dn"] | df["t1s_dn"] | df["t2_dn"] |
                          df["fb_resist"] | df["hidden_div_bear"] | df["shooting_dn"])
 
+    # cond3 trên khung chính (cho lịch sử chart)
     df["cond3_ok"] = ((is_up & df["bull_signal"]) |
                       (is_dn & df["bear_signal"]) |
                       (is_sw & (df["bull_signal"] | df["bear_signal"])))
+
+    # cond3 THỰC TẾ cho điểm: dùng tín hiệu H4 (entry frame)
+    cond3_entry = ((is_up and entry_bull) or (is_dn and entry_bear) or
+                   (is_sw and (entry_bull or entry_bear)))
+    # Gắn vào nến cuối
+    df.iloc[-1, df.columns.get_loc("cond3_ok")] = cond3_entry
+    df.attrs["entry_signal_name"] = entry_signal_name
+    df.attrs["entry_bull"] = entry_bull
+    df.attrs["entry_bear"] = entry_bear
 
     # ── Score /3 ──────────────────────────────────────────────
     df["score"]  = (df["cond1_ok"].astype(int) + df["cond2_ok"].astype(int) +
@@ -391,42 +526,6 @@ def logout():
 def index():
     return render_template("index.html")
 
-@app.route("/test-h4")
-@login_required
-def test_h4():
-    out = []
-    sym = request.args.get("sym", "VNM")
-    for res in ["1H", "60", "4H", "240"]:
-        try:
-            from vnstock import stock_historical_data
-            df = stock_historical_data(sym, "2026-01-01", "2026-06-08", resolution=res, type="stock")
-            out.append(f"vnstock res={res}: {len(df)} nến")
-        except Exception as e:
-            out.append(f"vnstock res={res}: LỖI {str(e)[:80]}")
-    try:
-        import yfinance as yf, socket
-        socket.setdefaulttimeout(20)
-        for interval in ["1h", "4h"]:
-            try:
-                df = yf.download(sym+".VN", period="60d", interval=interval, progress=False, timeout=15)
-                out.append(f"yfinance {interval}: {len(df)} nến")
-            except Exception as e2:
-                out.append(f"yfinance {interval}: LỖI {str(e2)[:60]}")
-    except Exception as e:
-        out.append(f"yfinance: LỖI {str(e)[:80]}")
-    try:
-        from vnstock3 import Vnstock
-        for interval in ["1H", "4H"]:
-            try:
-                df = Vnstock().stock(symbol=sym, source="VCI").quote.history(
-                    start="2026-01-01", end="2026-06-08", interval=interval)
-                out.append(f"vnstock3 {interval}: {len(df)} nến")
-            except Exception as e2:
-                out.append(f"vnstock3 {interval}: LỖI {str(e2)[:60]}")
-    except Exception as e:
-        out.append(f"vnstock3: LỖI {str(e)[:80]}")
-    return "<pre style='background:#0d1117;color:#e6edf3;padding:20px;font-size:14px'>" + "\n".join(out) + "</pre>"
-
 @app.route("/analyze", methods=["POST"])
 @login_required
 def analyze():
@@ -458,10 +557,11 @@ def analyze():
 
         df_main = get_data(symbol, start, timeframe=tf_chart)
         df_htf  = get_data(symbol, start, timeframe=tf_ref)
+        df_h4, h4_src = get_intraday_h4(symbol, start)   # v7: DK3 dùng H4
         if df_main.empty:
             return jsonify({"error": f"Không có dữ liệu cho '{symbol}'"}), 400
 
-        result   = run_checklist(df_main, df_htf, cfg)
+        result   = run_checklist(df_main, df_htf, cfg, df_entry=df_h4)
         row      = result.iloc[-1]
         score    = int(row["score"])
         chart_df = result.tail(200).copy()
@@ -509,14 +609,15 @@ def analyze():
             "score_max": 3,
             "action":    ["🔴 ĐỨNG NGOÀI","🔴 ĐỨNG NGOÀI",
                           "🟡 THEO DÕI SÁT","🟢 VÀO LỆNH"][score],
-            "direction": ("↑ LONG"  if bool(row["bull_signal"]) else
-                          "↓ SHORT" if bool(row["bear_signal"])  else "— Chờ tín hiệu"),
+            "direction": ("↑ LONG"  if result.attrs.get("entry_bull") else
+                          "↓ SHORT" if result.attrs.get("entry_bear")  else "— Chờ tín hiệu"),
             "cond1": bool(row["cond1_ok"]), "cond1_txt": trend_txt,
             "cond2": bool(row["cond2_ok"]),
             "cond2_txt": zone2_txt,
             "cond2a": bool(row["cond2_zone"]), "cond2a_txt": zone_txt,
             "cond2b": bool(row["cond2_rr"]),   "cond2b_txt": f"R:R {rr_txt}",
-            "cond3": bool(row["cond3_ok"]), "cond3_txt": str(row["signal_name"]) + vol_txt,
+            "cond3": bool(row["cond3_ok"]),
+            "cond3_txt": result.attrs.get("entry_signal_name","—") + f" [{h4_src}]" + vol_txt,
             "rsi":        f"{rsi_val:.1f}",
             "rsi_signal": ("📈 Phân kỳ ẩn tăng" if bool(row["hidden_div_bull"]) else
                            "📉 Phân kỳ ẩn giảm" if bool(row["hidden_div_bear"]) else "Bình thường"),
