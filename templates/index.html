@@ -258,9 +258,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
     <!-- Score bar -->
     <div class="score-bar" id="scoreBar">
-      <div class="cond" id="c1"><div class="cond-lbl">ĐIỀU KIỆN 1</div><div class="cond-ico">⬜</div><div class="cond-txt">Xu hướng rõ</div></div>
-      <div class="cond" id="c2"><div class="cond-lbl">ĐIỀU KIỆN 2</div><div class="cond-ico">⬜</div><div class="cond-txt">KC/HT + R:R</div></div>
-      <div class="cond" id="c3"><div class="cond-lbl">ĐIỀU KIỆN 3</div><div class="cond-ico">⬜</div><div class="cond-txt">Nến đảo chiều</div></div>
+      <div class="cond" id="c1"><div class="cond-lbl">ĐK1 · XU HƯỚNG (W)</div><div class="cond-ico">⬜</div><div class="cond-txt">Xu hướng rõ</div></div>
+      <div class="cond" id="c2"><div class="cond-lbl">ĐK2 · KC/HT (D)</div><div class="cond-ico">⬜</div><div class="cond-txt">KC/HT + R:R</div></div>
+      <div class="cond" id="c3"><div class="cond-lbl">ĐK3 · NẾN (H4)</div><div class="cond-ico">⬜</div><div class="cond-txt">Nến đảo chiều</div></div>
       <div class="action">
         <div class="a-score" id="aScore" style="color:var(--muted)">—</div>
         <div class="a-label" id="aLabel" style="color:var(--muted)">Chọn mã</div>
@@ -585,11 +585,12 @@ function clearDetail(){
   document.getElementById("detailWrap").innerHTML='<div style="color:var(--muted);font-family:var(--mono);font-size:12px;padding:40px;text-align:center">Chọn mã để xem chi tiết</div>';
 }
 
+const COND_LABELS = {1:"ĐK1 · XU HƯỚNG (W)", 2:"ĐK2 · KC/HT (D)", 3:"ĐK3 · NẾN (H4)"};
 function setCond(id,ok,n,txt,isNa=false){
   const el=document.getElementById(id);
   el.className="cond "+(isNa?"":ok?"ok":"fail");
   const ico = isNa ? "⬜" : ok ? "✅" : "❌";
-  el.innerHTML=`<div class="cond-lbl">ĐIỀU KIỆN ${n}</div><div class="cond-ico">${ico}</div><div class="cond-txt">${txt}</div>`;
+  el.innerHTML=`<div class="cond-lbl">${COND_LABELS[n]||("ĐIỀU KIỆN "+n)}</div><div class="cond-ico">${ico}</div><div class="cond-txt">${txt}</div>`;
 }
 
 function showSummary(s){
