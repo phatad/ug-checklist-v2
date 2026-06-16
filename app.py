@@ -391,6 +391,42 @@ def logout():
 def index():
     return render_template("index.html")
 
+@app.route("/test-h4")
+@login_required
+def test_h4():
+    out = []
+    sym = request.args.get("sym", "VNM")
+    for res in ["1H", "60", "4H", "240"]:
+        try:
+            from vnstock import stock_historical_data
+            df = stock_historical_data(sym, "2026-01-01", "2026-06-08", resolution=res, type="stock")
+            out.append(f"vnstock res={res}: {len(df)} nến")
+        except Exception as e:
+            out.append(f"vnstock res={res}: LỖI {str(e)[:80]}")
+    try:
+        import yfinance as yf, socket
+        socket.setdefaulttimeout(20)
+        for interval in ["1h", "4h"]:
+            try:
+                df = yf.download(sym+".VN", period="60d", interval=interval, progress=False, timeout=15)
+                out.append(f"yfinance {interval}: {len(df)} nến")
+            except Exception as e2:
+                out.append(f"yfinance {interval}: LỖI {str(e2)[:60]}")
+    except Exception as e:
+        out.append(f"yfinance: LỖI {str(e)[:80]}")
+    try:
+        from vnstock3 import Vnstock
+        for interval in ["1H", "4H"]:
+            try:
+                df = Vnstock().stock(symbol=sym, source="VCI").quote.history(
+                    start="2026-01-01", end="2026-06-08", interval=interval)
+                out.append(f"vnstock3 {interval}: {len(df)} nến")
+            except Exception as e2:
+                out.append(f"vnstock3 {interval}: LỖI {str(e2)[:60]}")
+    except Exception as e:
+        out.append(f"vnstock3: LỖI {str(e)[:80]}")
+    return "<pre style='background:#0d1117;color:#e6edf3;padding:20px;font-size:14px'>" + "\n".join(out) + "</pre>"
+
 @app.route("/analyze", methods=["POST"])
 @login_required
 def analyze():
