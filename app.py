@@ -630,6 +630,9 @@ def analyze():
             "pos_size":   f"{int(pos):,} cổ",
             "max_risk":   f"{max_risk:,.0f}₫",
             "trend_src":  row["trend_src"],
+            "chart_tf":   tf_chart,
+            "chart_bars": len(chart_df),
+            "h4_src":     h4_src,
         }
 
         sig_df  = result[result["bull_signal"]|result["bear_signal"]].tail(5).iloc[::-1]
