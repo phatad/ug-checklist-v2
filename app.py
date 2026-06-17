@@ -555,9 +555,13 @@ def analyze():
             "sl_pct":        float(data.get("sl_pct", 5.0)),
         }
 
-        df_main = get_data(symbol, start, timeframe=tf_chart)
-        df_htf  = get_data(symbol, start, timeframe=tf_ref)
         df_h4, h4_src = get_intraday_h4(symbol, start)   # v7: DK3 dùng H4
+        # Chart hiển thị: nếu chọn H4 thì dùng data H4 luôn
+        if tf_chart == "4H":
+            df_main = df_h4.copy() if not df_h4.empty else get_data(symbol, start, timeframe="1D")
+        else:
+            df_main = get_data(symbol, start, timeframe=tf_chart)
+        df_htf  = get_data(symbol, start, timeframe=tf_ref)
         if df_main.empty:
             return jsonify({"error": f"Không có dữ liệu cho '{symbol}'"}), 400
 
