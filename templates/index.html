@@ -291,7 +291,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       <div class="tf-bar" id="tfBar" style="display:none">
         <span class="tf-label">Khung:</span>
         <button class="tf-btn active" id="tfD" onclick="switchTf('1D')">D</button>
-        <button class="tf-btn" id="tfW" onclick="switchTf('1W')">W</button>
+        <button class="tf-btn" id="tfH4" onclick="switchTf('4H')">H4</button>
         <span class="tf-label" style="margin-left:auto;font-size:9px" id="tfInfo">—</span>
       </div>
       <div class="charts-wrap" id="chartsWrap">
@@ -752,7 +752,7 @@ function switchTf(tf){
   currentTf = tf;
   // Update button states
   document.getElementById('tfD').classList.toggle('active', tf==='1D');
-  document.getElementById('tfW').classList.toggle('active', tf==='1W');
+  document.getElementById('tfH4').classList.toggle('active', tf==='4H');
   // Re-fetch với timeframe mới
   selectSym(activeSym, tf);
 }
