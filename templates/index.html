@@ -525,24 +525,20 @@ function getParams(sym){
 
 async function selectSym(sym, tf=null){
   activeSym = sym;
-  // Nếu đổi tf → force refetch
-  const tfKey = sym + '_' + (tf || currentTf);
-  if(tf && tf !== currentTf){
-    currentTf = tf;
-  }
+  if(tf) currentTf = tf;
   renderWLList();
   renderOverview();
 
-  // Fetch nếu chưa có hoặc tf thay đổi
-  const cacheKey = sym + '_' + currentTf;
+  const useTf = currentTf;
+  const cacheKey = sym + '_' + useTf;
   if(!results[cacheKey]){
-    showChartLoading(true, `Đang lấy dữ liệu ${sym} (${currentTf})...`);
-    await analyzeOne(sym, currentTf);
+    showChartLoading(true, `Đang lấy dữ liệu ${sym} (${useTf})...`);
+    await analyzeOne(sym, useTf);
     renderWLList();
     renderOverview();
   }
 
-  const data = results[cacheKey] || results[sym];
+  const data = results[cacheKey];
   if(!data){ showChartLoading(false); return; }
 
   if(data.error){
@@ -611,7 +607,8 @@ function showSummary(s){
   document.getElementById("bDate").textContent=s.date;
   document.getElementById("bottomBar").style.display="flex";
   document.getElementById("tfBar").style.display="flex";
-  document.getElementById("tfInfo").textContent = s.date;
+  document.getElementById("tfInfo").textContent =
+    (s.chart_tf||"") + " · " + (s.chart_bars||0) + " nến · " + s.date;
 }
 
 // showSignals removed — signals now only in tab Chi tiết
@@ -753,7 +750,9 @@ function switchTf(tf){
   // Update button states
   document.getElementById('tfD').classList.toggle('active', tf==='1D');
   document.getElementById('tfH4').classList.toggle('active', tf==='4H');
-  // Re-fetch với timeframe mới
+  // Force refetch: xóa cache key này để chắc chắn lấy data mới
+  const cacheKey = activeSym + '_' + tf;
+  delete results[cacheKey];
   selectSym(activeSym, tf);
 }
 
