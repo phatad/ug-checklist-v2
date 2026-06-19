@@ -346,6 +346,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 <script>
 const SC = {0:"#ff1744",1:"#ff1744",2:"#ffa000",3:"#00c853"};
 const ACTIONS = ["🔴 ĐỨNG NGOÀI","🔴 ĐỨNG NGOÀI","🟡 THEO DÕI SÁT","🟢 VÀO LỆNH"];
+const ACTIONS_TXT = ["ĐỨNG NGOÀI","ĐỨNG NGOÀI","THEO DÕI SÁT","VÀO LỆNH"];
 const ACTION_SHORT = ["❌","❌","🟡","🟢"];
 
 // ── Watchlist state ────────────────────────────────────────────
@@ -441,7 +442,7 @@ function renderOverview(){
       <td style="font-family:var(--mono);color:var(--text)">${s.close}₫</td>
       <td><span class="score-pill" style="color:${col};background:${col}1a">
         <span class="score-dot" style="background:${col}"></span>${s.score}/${smax}</span></td>
-      <td><span class="act-chip" style="color:${col}"><span class="dot" style="background:${col}"></span>${ACTIONS[s.score].replace(/^[🔴🟡🟢🟠]\s*/,'')}</span></td>
+      <td><span class="act-chip" style="color:${col}"><span class="dot" style="background:${col}"></span>${ACTIONS_TXT[s.score]}</span></td>
       <td style="color:var(--muted);font-size:11px">${s.direction}</td>
       <td style="color:var(--muted);font-size:10px">${s.cond3_txt}</td>
     </tr>`;
