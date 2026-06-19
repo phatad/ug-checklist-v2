@@ -141,23 +141,39 @@ def get_data(symbol, start, end=None, timeframe="1D"):
 
     raise RuntimeError(f"Không lấy được data cho '{symbol}'.")
 
+# Cache H4 ở mức module: {symbol: (df, src, timestamp)}
+_H4_CACHE = {}
+_H4_TTL = 600  # 10 phút
+
 def get_intraday_h4(symbol, start, end=None):
-    """Lấy data khung H4 cho DK3. Thử yfinance 4h → vnstock 1H gộp → fallback D."""
+    """Lấy data khung H4 cho DK3. yfinance 4h → vnstock 1H gộp → fallback D.
+    Có cache 10 phút để tránh rate limit khi chạy nhiều mã."""
+    import time as _time
     end = end or date.today().strftime("%Y-%m-%d")
 
-    # 1. yfinance 4h (đúng khung H4)
-    try:
-        import yfinance as yf, socket
-        socket.setdefaulttimeout(20)
-        ticker = symbol+".VN" if not symbol.endswith(".VN") else symbol
-        df = yf.download(ticker, period="60d", interval="4h",
-                         progress=False, timeout=15)
-        df = _normalize(df.reset_index())
-        if not df.empty and len(df) > 20:
-            log.info(f"H4 yfinance OK: {symbol} {len(df)} nến")
-            return df, "H4"
-    except Exception as e:
-        log.warning(f"H4 yfinance: {e}")
+    # Check cache trước
+    cached = _H4_CACHE.get(symbol)
+    if cached and (_time.time() - cached[2] < _H4_TTL):
+        log.info(f"H4 cache hit: {symbol} ({cached[1]})")
+        return cached[0].copy(), cached[1]
+
+    # 1. yfinance 4h — retry 2 lần với delay
+    for attempt in range(2):
+        try:
+            import yfinance as yf, socket
+            socket.setdefaulttimeout(20)
+            ticker = symbol+".VN" if not symbol.endswith(".VN") else symbol
+            df = yf.download(ticker, period="60d", interval="4h",
+                             progress=False, timeout=15)
+            df = _normalize(df.reset_index())
+            if not df.empty and len(df) > 20:
+                log.info(f"H4 yfinance OK: {symbol} {len(df)} nến (lần {attempt+1})")
+                _H4_CACHE[symbol] = (df, "H4", _time.time())
+                return df.copy(), "H4"
+        except Exception as e:
+            log.warning(f"H4 yfinance lần {attempt+1}: {e}")
+        if attempt == 0:
+            _time.sleep(1.5)  # delay trước khi retry
 
     # 2. vnstock 1H rồi gộp 4 nến thành H4
     try:
@@ -175,8 +191,10 @@ def get_intraday_h4(symbol, start, end=None):
                                           "low":"min","close":"last","volume":"sum"}).dropna()
             agg = agg.reset_index()
             if not agg.empty:
+                import time as _t
                 log.info(f"H4 vnstock(1H→4H) OK: {symbol} {len(agg)} nến")
-                return agg, "H4(1H)"
+                _H4_CACHE[symbol] = (agg, "H4(1H)", _t.time())
+                return agg.copy(), "H4(1H)"
     except Exception as e:
         log.warning(f"H4 vnstock 1H: {e}")
 
@@ -184,7 +202,9 @@ def get_intraday_h4(symbol, start, end=None):
     try:
         df = get_data(symbol, start, end, timeframe="1D")
         if not df.empty:
+            import time as _t
             log.info(f"H4 fallback Daily: {symbol} {len(df)} nến")
+            # KHÔNG cache fallback — để lần sau thử lại H4 thật
             return df, "D(fallback)"
     except Exception as e:
         log.warning(f"H4 fallback: {e}")
@@ -525,6 +545,45 @@ def logout():
 @login_required
 def index():
     return render_template("index.html")
+
+@app.route("/test-h4")
+@login_required
+def test_h4():
+    out = []
+    sym = request.args.get("sym", "GEL")
+    out.append(f"=== TEST H4 cho {sym} ===\n")
+
+    # yfinance 4h
+    try:
+        import yfinance as yf, socket
+        socket.setdefaulttimeout(20)
+        df = yf.download(sym+".VN", period="60d", interval="4h", progress=False, timeout=15)
+        out.append(f"yfinance 4h: {len(df)} nến")
+        if len(df) > 0:
+            out.append(f"  → nến mới nhất: {df.index[-1]}")
+    except Exception as e:
+        out.append(f"yfinance 4h LỖI: {repr(e)[:150]}")
+
+    # yfinance 1h
+    try:
+        import yfinance as yf
+        df = yf.download(sym+".VN", period="30d", interval="1h", progress=False, timeout=15)
+        out.append(f"yfinance 1h: {len(df)} nến")
+    except Exception as e:
+        out.append(f"yfinance 1h LỖI: {repr(e)[:150]}")
+
+    # vnstock 1H
+    try:
+        from vnstock import stock_historical_data
+        df = stock_historical_data(sym, "2026-04-01", "2026-06-18", resolution="1H", type="stock")
+        out.append(f"vnstock 1H: {len(df)} nến")
+        if len(df) > 0:
+            out.append(f"  → cột: {list(df.columns)}")
+            out.append(f"  → dòng cuối: {df.iloc[-1].to_dict()}")
+    except Exception as e:
+        out.append(f"vnstock 1H LỖI: {repr(e)[:150]}")
+
+    return "<pre style='background:#0d1117;color:#0f6;padding:20px;font-size:13px;line-height:1.6'>" + "\n".join(out) + "</pre>"
 
 @app.route("/analyze", methods=["POST"])
 @login_required
