@@ -231,6 +231,7 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     VMALEN  = cfg["vol_ma_len"]
     VSMULT  = cfg["vol_sig_mult"]
     VFMULT  = cfg["vol_fb_mult"]
+    VHMULT  = cfg.get("vol_hunter_mult", 1.5)
     URSIDIV = cfg["use_rsi_div"]
     RSILEN  = cfg["rsi_len"]
     RR_MIN  = cfg["rr_min"]
@@ -258,6 +259,11 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     # v6: volume check trên nến đã đóng shift(1)
     df["vol_sig_ok"] = (~UVOL) | (df["volume"].shift(1) >= df["vol_ma"].shift(1) * VSMULT)
     df["vol_fb_ok"]  = (~UVOL) | (df["volume"].shift(1) <= df["vol_ma"].shift(1) * VFMULT)
+    # v7_2: volume tăng dần cho T1/T2, volume đột biến cho T3
+    df["vol_seq_ok"] = (~UVOL) | (
+        (df["volume"].shift(1) >= df["vol_ma"].shift(1) * VSMULT) &
+        (df["volume"].shift(3) >= df["vol_ma"].shift(3) * 1.0))
+    df["vol_hunter_ok"] = (~UVOL) | (df["volume"].shift(1) >= df["vol_ma"].shift(1) * VHMULT)
     # backward compat cho bottom bar
     df["vol_ok"] = df["vol_sig_ok"]
 
@@ -351,10 +357,18 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     de["vol_ma_e"]   = de["volume"].rolling(VMALEN).mean()
     de["vol_sig_ok_e"] = (~UVOL) | (de["volume"].shift(1) >= de["vol_ma_e"].shift(1) * VSMULT)
     de["vol_fb_ok_e"]  = (~UVOL) | (de["volume"].shift(1) <= de["vol_ma_e"].shift(1) * VFMULT)
+    # v7_2: volume tăng dần qua chuỗi nến (nến gốc [3] cũng phải đủ) cho T1/T2
+    de["vol_seq_ok_e"] = (~UVOL) | (
+        (de["volume"].shift(1) >= de["vol_ma_e"].shift(1) * VSMULT) &
+        (de["volume"].shift(3) >= de["vol_ma_e"].shift(3) * 1.0))
+    # v7_2: volume đột biến mạnh (>=1.5x) cho T3 SL-Hunter
+    de["vol_hunter_ok_e"] = (~UVOL) | (de["volume"].shift(1) >= de["vol_ma_e"].shift(1) * VHMULT)
 
     def se(col, i): return de[col].shift(i)
-    vse  = de["vol_sig_ok_e"]
-    vfbe = de["vol_fb_ok_e"]
+    vse   = de["vol_sig_ok_e"]
+    vfbe  = de["vol_fb_ok_e"]
+    vseqe = de["vol_seq_ok_e"]
+    vhune = de["vol_hunter_ok_e"]
 
     # Tín hiệu nến trên khung entry
     de["t1s_up_e"] = (se("is_bear_e",2) & se("big_body_e",2) & se("sig_big_e",2) &
@@ -365,26 +379,26 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
                       (se("close",1) < se("open",2)) & vse)
     de["t1_up_e"] = (se("is_bear_e",3) & se("big_body_e",3) & se("sig_big_e",3) &
                      se("is_bull_e",2) & se("lw_dn_e",2)   & se("sig_big_e",2) &
-                     se("is_bull_e",1) & se("big_body_e",1) & se("sig_big_e",1) & vse)
+                     se("is_bull_e",1) & se("big_body_e",1) & se("sig_big_e",1) & vseqe)
     de["t1_dn_e"] = (se("is_bull_e",3) & se("big_body_e",3) & se("sig_big_e",3) &
                      se("is_bear_e",2) & se("lw_up_e",2)   & se("sig_big_e",2) &
-                     se("is_bear_e",1) & se("big_body_e",1) & se("sig_big_e",1) & vse)
+                     se("is_bear_e",1) & se("big_body_e",1) & se("sig_big_e",1) & vseqe)
     de["t2_up_e"] = (se("is_bear_e",3) & se("sig_big_e",3) &
                      se("is_bear_e",2) & se("sig_big_e",2) & (se("body_e",2) < se("body_e",3)*0.85) &
                      se("sig_big_e",1) & (se("body_e",1) < se("body_e",2)*0.85) &
                      (se("close",3) < se("close",5)) &
-                     (se("lw_dn_e",1) | se("is_bull_e",1)) & vse)
+                     (se("lw_dn_e",1) | se("is_bull_e",1)) & vseqe)
     de["t2_dn_e"] = (se("is_bull_e",3) & se("sig_big_e",3) &
                      se("is_bull_e",2) & se("sig_big_e",2) & (se("body_e",2) < se("body_e",3)*0.85) &
                      se("sig_big_e",1) & (se("body_e",1) < se("body_e",2)*0.85) &
                      (se("close",3) > se("close",5)) &
-                     (se("lw_up_e",1) | se("is_bear_e",1)) & vse)
+                     (se("lw_up_e",1) | se("is_bear_e",1)) & vseqe)
     de["t3_up_e"] = (se("lw_dn_e",2) & se("sig_big_e",2) &
                      se("lw_dn_e",1) & se("sig_big_e",1) &
-                     (se("low",1) < se("low",2)) & (se("close",1) > se("close",2)) & vse)
+                     (se("low",1) < se("low",2)) & (se("close",1) > se("close",2)) & vhune)
     de["t3_dn_e"] = (se("lw_up_e",2) & se("sig_big_e",2) &
                      se("lw_up_e",1) & se("sig_big_e",1) &
-                     (se("high",1) > se("high",2)) & (se("close",1) < se("close",2)) & vse)
+                     (se("high",1) > se("high",2)) & (se("close",1) < se("close",2)) & vhune)
 
     # Lấy tín hiệu của nến entry mới nhất
     last_e = de.iloc[-1]
@@ -427,8 +441,10 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
 
     # Shorthand shift — dùng nến đã đóng (index >= 1)
     def s(col, i): return df[col].shift(i)
-    vs  = df["vol_sig_ok"]
-    vfb = df["vol_fb_ok"]
+    vs   = df["vol_sig_ok"]
+    vfb  = df["vol_fb_ok"]
+    vseq = df["vol_seq_ok"]
+    vhun = df["vol_hunter_ok"]
 
     # T1S: Đỏ dài[2] → Xanh dài[1] đóng trên open[2]
     df["t1s_up"] = (s("is_bear",2) & s("big_body",2) & s("sig_big",2) &
@@ -441,30 +457,30 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     # T1: Đỏ dài[3] → Xanh râu dưới[2] → Xanh dài[1]
     df["t1_up"] = (s("is_bear",3) & s("big_body",3) & s("sig_big",3) &
                    s("is_bull",2) & s("lw_dn",2)   & s("sig_big",2) &
-                   s("is_bull",1) & s("big_body",1) & s("sig_big",1) & vs)
+                   s("is_bull",1) & s("big_body",1) & s("sig_big",1) & vseq)
     df["t1_dn"] = (s("is_bull",3) & s("big_body",3) & s("sig_big",3) &
                    s("is_bear",2) & s("lw_up",2)   & s("sig_big",2) &
-                   s("is_bear",1) & s("big_body",1) & s("sig_big",1) & vs)
+                   s("is_bear",1) & s("big_body",1) & s("sig_big",1) & vseq)
 
     # T2: 3 nến bé dần + context close[3]<close[5]
     df["t2_up"] = (s("is_bear",3) & s("sig_big",3) &
                    s("is_bear",2) & s("sig_big",2) & (s("body",2) < s("body",3)*0.85) &
                    s("sig_big",1) & (s("body",1) < s("body",2)*0.85) &
                    (s("close",3) < s("close",5)) &
-                   (s("lw_dn",1) | s("is_bull",1)) & vs)
+                   (s("lw_dn",1) | s("is_bull",1)) & vseq)
     df["t2_dn"] = (s("is_bull",3) & s("sig_big",3) &
                    s("is_bull",2) & s("sig_big",2) & (s("body",2) < s("body",3)*0.85) &
                    s("sig_big",1) & (s("body",1) < s("body",2)*0.85) &
                    (s("close",3) > s("close",5)) &
-                   (s("lw_up",1) | s("is_bear",1)) & vs)
+                   (s("lw_up",1) | s("is_bear",1)) & vseq)
 
     # T3: 2 nến râu, low[1]<low[2], close[1]>close[2]
     df["t3_up"] = (s("lw_dn",2) & s("sig_big",2) &
                    s("lw_dn",1) & s("sig_big",1) &
-                   (s("low",1) < s("low",2)) & (s("close",1) > s("close",2)) & vs)
+                   (s("low",1) < s("low",2)) & (s("close",1) > s("close",2)) & vhun)
     df["t3_dn"] = (s("lw_up",2) & s("sig_big",2) &
                    s("lw_up",1) & s("sig_big",1) &
-                   (s("high",1) > s("high",2)) & (s("close",1) < s("close",2)) & vs)
+                   (s("high",1) > s("high",2)) & (s("close",1) < s("close",2)) & vhun)
 
     # False Breakout (dùng vol_fb)
     df["fb_resist"]  = ((s("high",1) > df["resist"]) & (s("close",1) < df["resist"]) &
@@ -572,6 +588,7 @@ def analyze():
             "vol_ma_len":    int(data.get("vol_ma_len", 20)),
             "vol_sig_mult":  float(data.get("vol_sig_mult", 1.2)),
             "vol_fb_mult":   float(data.get("vol_fb_mult", 1.5)),
+            "vol_hunter_mult": float(data.get("vol_hunter_mult", 1.5)),
             "use_rsi_div":   bool(data.get("use_rsi_div", True)),
             "rsi_len":       int(data.get("rsi_len", 14)),
             "rr_min":        float(data.get("rr_min", 2.0)),
@@ -626,7 +643,21 @@ def analyze():
         rr_val    = safe(row.get("rr_value", np.nan))
         rr_txt    = f"{rr_val:.2f}:1" if rr_val else "N/A"
         zone2_txt = f"{zone_txt} | R:R {rr_txt}"
-        vol_txt   = (" | Vol✅" if row["vol_sig_ok"] else " | Vol❌") if cfg["use_volume"] else ""
+        # v7_2: hiển thị đúng loại volume theo tín hiệu H4 đang active
+        if cfg["use_volume"]:
+            eb = result.attrs.get("entry_bull", False)
+            ebr = result.attrs.get("entry_bear", False)
+            esn = result.attrs.get("entry_signal_name", "")
+            if "T3" in esn or "Hunter" in esn:
+                vol_txt = " | Vol✅(đột biến)" if (eb or ebr) else " | Vol❌"
+            elif "Breakout" in esn:
+                vol_txt = " | VolFB"
+            elif "T1" in esn or "T2" in esn:
+                vol_txt = " | Vol✅(chuỗi)" if (eb or ebr) else " | Vol❌"
+            else:
+                vol_txt = " | Vol✅" if row["vol_sig_ok"] else " | Vol❌"
+        else:
+            vol_txt = ""
         max_risk  = cfg["account"] * cfg["risk_pct"] / 100
         pos       = safe(row["pos_size"]) or 0
         rsi_val   = safe(row["rsi"]) or 0
