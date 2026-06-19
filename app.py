@@ -630,7 +630,7 @@ def analyze():
             "pos_size":   f"{int(pos):,} cổ",
             "max_risk":   f"{max_risk:,.0f}₫",
             "trend_src":  row["trend_src"],
-            "chart_tf":   tf_chart,
+            "chart_tf":   (h4_src if tf_chart == "4H" else tf_chart),
             "chart_bars": len(chart_df),
             "h4_src":     h4_src,
         }
