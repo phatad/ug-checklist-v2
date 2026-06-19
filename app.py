@@ -83,7 +83,10 @@ def find_pivot_low(series, left, right):
 # ═══════════════════════════════════════════════════════════════
 def _normalize(df):
     df = df.copy()
-    df.columns = [c.lower() for c in df.columns]
+    # yfinance trả MultiIndex columns (tuple) → flatten lấy level 0
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = [c[0] if isinstance(c, tuple) else c for c in df.columns]
+    df.columns = [str(c).lower() for c in df.columns]
     rename = {"time":"date","tradingdate":"date","open":"open",
               "high":"high","low":"low","close":"close","volume":"volume"}
     df = df.rename(columns={k:v for k,v in rename.items() if k in df.columns})
@@ -187,7 +190,7 @@ def get_intraday_h4(symbol, start, end=None):
         if not df.empty and len(df) > 20:
             # Gộp 1H → 4H: lấy mỗi 4 nến
             df = df.set_index("date")
-            agg = df.resample("4H").agg({"open":"first","high":"max",
+            agg = df.resample("4h").agg({"open":"first","high":"max",
                                           "low":"min","close":"last","volume":"sum"}).dropna()
             agg = agg.reset_index()
             if not agg.empty:
@@ -545,45 +548,6 @@ def logout():
 @login_required
 def index():
     return render_template("index.html")
-
-@app.route("/test-h4")
-@login_required
-def test_h4():
-    out = []
-    sym = request.args.get("sym", "GEL")
-    out.append(f"=== TEST H4 cho {sym} ===\n")
-
-    # yfinance 4h
-    try:
-        import yfinance as yf, socket
-        socket.setdefaulttimeout(20)
-        df = yf.download(sym+".VN", period="60d", interval="4h", progress=False, timeout=15)
-        out.append(f"yfinance 4h: {len(df)} nến")
-        if len(df) > 0:
-            out.append(f"  → nến mới nhất: {df.index[-1]}")
-    except Exception as e:
-        out.append(f"yfinance 4h LỖI: {repr(e)[:150]}")
-
-    # yfinance 1h
-    try:
-        import yfinance as yf
-        df = yf.download(sym+".VN", period="30d", interval="1h", progress=False, timeout=15)
-        out.append(f"yfinance 1h: {len(df)} nến")
-    except Exception as e:
-        out.append(f"yfinance 1h LỖI: {repr(e)[:150]}")
-
-    # vnstock 1H
-    try:
-        from vnstock import stock_historical_data
-        df = stock_historical_data(sym, "2026-04-01", "2026-06-18", resolution="1H", type="stock")
-        out.append(f"vnstock 1H: {len(df)} nến")
-        if len(df) > 0:
-            out.append(f"  → cột: {list(df.columns)}")
-            out.append(f"  → dòng cuối: {df.iloc[-1].to_dict()}")
-    except Exception as e:
-        out.append(f"vnstock 1H LỖI: {repr(e)[:150]}")
-
-    return "<pre style='background:#0d1117;color:#0f6;padding:20px;font-size:13px;line-height:1.6'>" + "\n".join(out) + "</pre>"
 
 @app.route("/analyze", methods=["POST"])
 @login_required
