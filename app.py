@@ -160,23 +160,26 @@ def get_intraday_h4(symbol, start, end=None):
         log.info(f"H4 cache hit: {symbol} ({cached[1]})")
         return cached[0].copy(), cached[1]
 
-    # 1. yfinance 4h — retry 2 lần với delay
-    for attempt in range(2):
+    # 1. yfinance 4h — retry 3 lần, dùng Ticker.history (ổn định hơn download)
+    ticker = symbol+".VN" if not symbol.endswith(".VN") else symbol
+    for attempt in range(3):
         try:
             import yfinance as yf, socket
-            socket.setdefaulttimeout(20)
-            ticker = symbol+".VN" if not symbol.endswith(".VN") else symbol
-            df = yf.download(ticker, period="60d", interval="4h",
-                             progress=False, timeout=15)
+            socket.setdefaulttimeout(25)
+            tk = yf.Ticker(ticker)
+            df = tk.history(period="60d", interval="4h", auto_adjust=True)
             df = _normalize(df.reset_index())
             if not df.empty and len(df) > 20:
                 log.info(f"H4 yfinance OK: {symbol} {len(df)} nến (lần {attempt+1})")
                 _H4_CACHE[symbol] = (df, "H4", _time.time())
                 return df.copy(), "H4"
+            else:
+                log.warning(f"H4 yfinance lần {attempt+1}: chỉ {len(df)} nến")
         except Exception as e:
             log.warning(f"H4 yfinance lần {attempt+1}: {e}")
-        if attempt == 0:
-            _time.sleep(1.5)  # delay trước khi retry
+        # delay tăng dần: 1s, 2s
+        if attempt < 2:
+            _time.sleep(1.0 * (attempt + 1))
 
     # 2. vnstock 1H rồi gộp 4 nến thành H4
     try:
