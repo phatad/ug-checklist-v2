@@ -74,15 +74,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .main{display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden}
 /* Score bar */
 .score-bar{display:grid;grid-template-columns:repeat(3,1fr) 150px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
-.cond{background:var(--surface);padding:7px 10px;border-right:1px solid var(--border);transition:background .2s;min-width:0}
-.cond.ok{background:rgba(0,230,118,.06)}
-.cond.fail{background:rgba(255,23,68,.04)}
-.cond-lbl{font-size:8px;font-family:var(--mono);color:var(--muted);letter-spacing:1px;margin-bottom:2px}
-.cond-ico{font-size:13px;margin-bottom:1px}
-.cond-txt{font-size:10px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.action{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 10px;gap:2px}
-.a-score{font-family:var(--mono);font-size:20px;font-weight:700}
-.a-label{font-size:10px;font-weight:600;text-align:center}
+.cond{position:relative;background:var(--surface);padding:9px 12px;border-right:1px solid var(--border);transition:all .25s;min-width:0}
+.cond.ok{background:rgba(0,230,118,.07);box-shadow:inset 0 2px 0 #00e676}
+.cond.fail{background:rgba(255,23,68,.05);box-shadow:inset 0 2px 0 rgba(255,23,68,.5)}
+.cond-lbl{font-size:8px;font-family:var(--mono);color:var(--muted);letter-spacing:1.2px;margin-bottom:3px;display:flex;align-items:center;gap:4px}
+.cond-ico{font-size:14px;margin-bottom:2px}
+.cond-txt{font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.action{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 10px;gap:3px;background:var(--card)}
+.a-score{font-family:var(--mono);font-size:22px;font-weight:700;line-height:1}
+.a-label{font-size:10px;font-weight:700;text-align:center;letter-spacing:.5px}
 .a-dir{font-size:9px;color:var(--muted)}
 /* Tabs */
 .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
@@ -94,13 +94,21 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .wl-overview{flex:1;overflow-y:auto;padding:0}
 .wl-overview::-webkit-scrollbar{width:4px}
 .wl-overview::-webkit-scrollbar-thumb{background:var(--border)}
-.overview-tbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
-.overview-tbl th{color:var(--muted);text-align:left;padding:8px 12px;font-weight:400;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1;font-size:9px;letter-spacing:1px;text-transform:uppercase}
-.overview-tbl td{padding:10px 12px;border-bottom:1px solid rgba(33,38,45,.5)}
+.overview-tbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+.overview-tbl th{color:var(--muted);text-align:left;padding:11px 14px;font-weight:400;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1;font-size:9px;letter-spacing:1.5px;text-transform:uppercase}
+.overview-tbl td{padding:13px 14px;border-bottom:1px solid rgba(33,38,45,.5);vertical-align:middle}
 .overview-tbl tr{cursor:pointer;transition:background .15s}
 .overview-tbl tr:hover td{background:rgba(88,166,255,.06)}
-.overview-tbl tr.active-row td{background:rgba(88,166,255,.1)}
+.overview-tbl tr.active-row td{background:rgba(88,166,255,.1);box-shadow:inset 3px 0 0 var(--accent)}
 .overview-tbl tr.loading-row td{opacity:.5}
+/* Score pill trong bảng */
+.score-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-weight:700;font-size:11px;font-family:var(--mono)}
+.score-dot{width:6px;height:6px;border-radius:50%}
+/* Action chip */
+.act-chip{display:inline-flex;align-items:center;gap:5px;font-weight:600;font-size:11px}
+.act-chip .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+/* Mã ticker style */
+.tk-sym{font-weight:700;font-family:var(--mono);font-size:13px;letter-spacing:.5px}
 /* Chart area */
 .charts-wrap{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
 #chartCandle{flex:1;min-height:60px}
@@ -158,7 +166,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .overlay-bg.show{display:block}
 @media(max-width:768px){
   .menu-btn{display:block}
-  .dot{display:none}
+  .hdr .dot{display:none}
   .layout{grid-template-columns:1fr}
   .sidebar{position:fixed;top:48px;left:0;bottom:0;width:80vw;max-width:280px;z-index:100;transform:translateX(-100%);transition:transform .25s;box-shadow:4px 0 20px rgba(0,0,0,.5)}
   .sidebar.open{transform:translateX(0)}
@@ -166,6 +174,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   .action{grid-column:1/-1;flex-direction:row;gap:12px;padding:6px 10px}
   .stats-col{min-width:0;padding:6px 10px}
   .bottom-bar{height:auto}
+  .overview-tbl{font-size:11px}
+  .overview-tbl th,.overview-tbl td{padding:9px 8px}
+  .overview-tbl th:nth-child(5),.overview-tbl td:nth-child(5){display:none}
+  .overview-tbl th:nth-child(6),.overview-tbl td:nth-child(6){display:none}
+  .cond-txt{font-size:10px}
 }
 </style>
 </head>
@@ -422,12 +435,14 @@ function renderOverview(){
     const s = r.summary;
     const col = SC[s.score];
     const isActive = sym === activeSym;
+    const smax = s.score_max||3;
     return `<tr class="${isActive?'active-row':''}" onclick="selectSym('${sym}')">
-      <td style="font-weight:700;color:${isActive?'var(--accent)':'var(--text)'};font-family:var(--mono)">${sym}</td>
-      <td style="font-family:var(--mono)">${s.close}₫</td>
-      <td><span style="color:${col};font-weight:700;font-family:var(--mono)">${s.score}/${s.score_max||5}</span></td>
-      <td style="color:${col};font-weight:600">${ACTIONS[s.score]}</td>
-      <td style="color:var(--muted);font-size:10px">${s.direction}</td>
+      <td><span class="tk-sym" style="color:${isActive?'var(--accent)':'var(--text)'}">${sym}</span></td>
+      <td style="font-family:var(--mono);color:var(--text)">${s.close}₫</td>
+      <td><span class="score-pill" style="color:${col};background:${col}1a">
+        <span class="score-dot" style="background:${col}"></span>${s.score}/${smax}</span></td>
+      <td><span class="act-chip" style="color:${col}"><span class="dot" style="background:${col}"></span>${ACTIONS[s.score].replace(/^[🔴🟡🟢🟠]\s*/,'')}</span></td>
+      <td style="color:var(--muted);font-size:11px">${s.direction}</td>
       <td style="color:var(--muted);font-size:10px">${s.cond3_txt}</td>
     </tr>`;
   }).join("");
