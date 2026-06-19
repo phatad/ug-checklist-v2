@@ -454,12 +454,17 @@ async function runAll(){
   btn.textContent = "⏹ DỪNG";
   btn.style.background = "var(--red)";
 
-  for(const sym of watchlist){
+  for(let i=0; i<watchlist.length; i++){
+    const sym = watchlist[i];
     if(cancelRun) break;
     btn.textContent = `⏹ ${sym}... (dừng)`;
     await analyzeOne(sym);
     renderWLList();
     renderOverview();
+    // Delay nhẹ giữa các mã để tránh rate limit H4
+    if(i < watchlist.length - 1 && !cancelRun){
+      await new Promise(r => setTimeout(r, 800));
+    }
   }
 
   isRunning = false;
@@ -664,29 +669,27 @@ function drawCharts(c, sym){
     x:c.dates,open:c.open,high:c.high,low:c.low,close:c.close,
     increasing:{line:{color:"#00e676"},fillcolor:"#00e676"},
     decreasing:{line:{color:"#ff1744"},fillcolor:"#ff1744"}};
-  const rTop={type:"scatter",x:c.dates,y:c.resist_top,mode:"lines",line:{color:"rgba(255,23,68,0.2)",width:1},name:"KC trên"};
-  const rBot={type:"scatter",x:c.dates,y:c.resist_bot,mode:"lines",line:{color:"rgba(255,23,68,0.2)",width:1},fill:"tonexty",fillcolor:"rgba(255,23,68,0.07)",name:"KC dưới"};
-  const sTop={type:"scatter",x:c.dates,y:c.support_top,mode:"lines",line:{color:"rgba(0,230,118,0.2)",width:1},name:"HT trên"};
-  const sBot={type:"scatter",x:c.dates,y:c.support_bot,mode:"lines",line:{color:"rgba(0,230,118,0.2)",width:1},fill:"tonexty",fillcolor:"rgba(0,230,118,0.07)",name:"HT dưới"};
-  // Chỉ hiện tín hiệu ≥ 4/5 để không spam chart
-  const b4=c.bull_4.length?{type:"scatter",mode:"markers+text",name:"✅ LONG",
-    x:c.bull_4.map(r=>r.date),y:c.bull_4.map(r=>r.low*.983),
-    marker:{symbol:"triangle-up",size:14,color:"#00c853"},
-    text:c.bull_4.map(()=>"▲"),textposition:"bottom center",
-    textfont:{color:"#00c853",size:10}}:null;
-  const be4=c.bear_4.length?{type:"scatter",mode:"markers+text",name:"✅ SHORT",
-    x:c.bear_4.map(r=>r.date),y:c.bear_4.map(r=>r.high*1.017),
-    marker:{symbol:"triangle-down",size:14,color:"#d50000"},
-    text:c.bear_4.map(()=>"▼"),textposition:"top center",
-    textfont:{color:"#d50000",size:10}}:null;
-  const b3=c.bull_3.length?{type:"scatter",mode:"markers",name:"🟡 Theo dõi LONG",
-    x:c.bull_3.map(r=>r.date),y:c.bull_3.map(r=>r.low*.991),
-    marker:{symbol:"triangle-up",size:8,color:"#ffa000"}}:null;
-  const be3=c.bear_3.length?{type:"scatter",mode:"markers",name:"🟡 Theo dõi SHORT",
-    x:c.bear_3.map(r=>r.date),y:c.bear_3.map(r=>r.high*1.009),
-    marker:{symbol:"triangle-down",size:8,color:"#ff6d00"}}:null;
+  // KC/HT zones: fill mờ nhẹ + viền mảnh, không che nến. Ẩn 2 đường biên khỏi legend.
+  const rTop={type:"scatter",x:c.dates,y:c.resist_top,mode:"lines",line:{color:"rgba(255,82,82,0.18)",width:0.8},name:"KC trên",showlegend:false,hoverinfo:"skip"};
+  const rBot={type:"scatter",x:c.dates,y:c.resist_bot,mode:"lines",line:{color:"rgba(255,82,82,0.28)",width:1},fill:"tonexty",fillcolor:"rgba(255,82,82,0.05)",name:"Kháng cự",legendgroup:"kc",hoverinfo:"skip"};
+  const sTop={type:"scatter",x:c.dates,y:c.support_top,mode:"lines",line:{color:"rgba(0,230,118,0.18)",width:0.8},name:"HT trên",showlegend:false,hoverinfo:"skip"};
+  const sBot={type:"scatter",x:c.dates,y:c.support_bot,mode:"lines",line:{color:"rgba(0,230,118,0.28)",width:1},fill:"tonexty",fillcolor:"rgba(0,230,118,0.05)",name:"Hỗ trợ",legendgroup:"ht",hoverinfo:"skip"};
+  // Tín hiệu mạnh (3/3): marker to, rõ
+  const b4=c.bull_4.length?{type:"scatter",mode:"markers",name:"LONG",
+    x:c.bull_4.map(r=>r.date),y:c.bull_4.map(r=>r.low*.985),
+    marker:{symbol:"triangle-up",size:13,color:"#00e676",line:{color:"#0d1117",width:1}}}:null;
+  const be4=c.bear_4.length?{type:"scatter",mode:"markers",name:"SHORT",
+    x:c.bear_4.map(r=>r.date),y:c.bear_4.map(r=>r.high*1.015),
+    marker:{symbol:"triangle-down",size:13,color:"#ff1744",line:{color:"#0d1117",width:1}}}:null;
+  // Tín hiệu theo dõi (2/3): marker nhỏ, mờ hơn — gộp chung 1 legend "Theo dõi"
+  const b3=c.bull_3.length?{type:"scatter",mode:"markers",name:"Theo dõi",legendgroup:"watch",
+    x:c.bull_3.map(r=>r.date),y:c.bull_3.map(r=>r.low*.992),
+    marker:{symbol:"triangle-up",size:7,color:"rgba(255,160,0,0.7)"}}:null;
+  const be3=c.bear_3.length?{type:"scatter",mode:"markers",name:"Theo dõi",legendgroup:"watch",showlegend:false,
+    x:c.bear_3.map(r=>r.date),y:c.bear_3.map(r=>r.high*1.008),
+    marker:{symbol:"triangle-down",size:7,color:"rgba(255,160,0,0.7)"}}:null;
 
-  const layoutBase={paper_bgcolor:"#080c10",plot_bgcolor:"#0d1117",font:{color:"#8b949e",family:"JetBrains Mono,monospace",size:10},legend:{orientation:"h",x:0,y:1.02,bgcolor:"rgba(0,0,0,0)",font:{size:9},xanchor:"left"},hovermode:"x unified",hoverlabel:{bgcolor:"#161b22",bordercolor:"#21262d",font:{size:10}}};
+  const layoutBase={paper_bgcolor:"#080c10",plot_bgcolor:"#0d1117",font:{color:"#8b949e",family:"JetBrains Mono,monospace",size:10},legend:{orientation:"h",x:0.5,y:1.04,xanchor:"center",bgcolor:"rgba(13,17,23,0.6)",bordercolor:"rgba(33,38,45,0.8)",borderwidth:1,font:{size:9,color:"#b1bac4"},itemsizing:"constant"},hovermode:"x unified",hoverlabel:{bgcolor:"#161b22",bordercolor:"#21262d",font:{size:10}}};
 
   Plotly.react("chartCandle",[candle,rTop,rBot,sTop,sBot,b4,be4,b3,be3].filter(Boolean),
     {...layoutBase,margin:{t:8,r:8,b:24,l:55},xaxis:{rangeslider:{visible:false},gridcolor:"#21262d",linecolor:"#21262d",tickfont:{size:9}},yaxis:{gridcolor:"#21262d",linecolor:"#21262d",tickfont:{size:9}}},
