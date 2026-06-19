@@ -290,8 +290,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <div class="tab-pane" id="tabChart" style="display:none;flex-direction:column">
       <div class="tf-bar" id="tfBar" style="display:none">
         <span class="tf-label">Khung:</span>
-        <button class="tf-btn active" id="tfD" onclick="switchTf('1D')">D</button>
-        <button class="tf-btn" id="tfH4" onclick="switchTf('4H')">H4</button>
+        <button class="tf-btn" id="tfD" onclick="switchTf('1D')">D</button>
+        <button class="tf-btn active" id="tfH4" onclick="switchTf('4H')">H4</button>
         <span class="tf-label" style="margin-left:auto;font-size:9px" id="tfInfo">—</span>
       </div>
       <div class="charts-wrap" id="chartsWrap">
@@ -742,7 +742,7 @@ function toggleSidebar(){
 
 
 // ── Timeframe switch ────────────────────────────────────────
-let currentTf = '1D';
+let currentTf = '4H';
 
 function switchTf(tf){
   if(!activeSym) return;
