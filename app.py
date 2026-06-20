@@ -513,6 +513,29 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     df.attrs["entry_bull"] = entry_bull
     df.attrs["entry_bear"] = entry_bear
 
+    # Lưu 5 tín hiệu H4 gần nhất (đồng bộ với DK3)
+    de["bull_sig_e"] = (de["t3_up_e"] | de["t1_up_e"] | de["t1s_up_e"] | de["t2_up_e"])
+    de["bear_sig_e"] = (de["t3_dn_e"] | de["t1_dn_e"] | de["t1s_dn_e"] | de["t2_dn_e"])
+    def esig_nm(row):
+        if row["bull_sig_e"]:
+            if row.get("t3_up_e"):  return "🎯 T3 SL-Hunter ↑"
+            if row.get("t1_up_e"):  return "T1 Đảo Chiều ↑"
+            if row.get("t1s_up_e"): return "T1S Đảo Chiều ↑"
+            if row.get("t2_up_e"):  return "T2 Yếu Dần ↑"
+        if row["bear_sig_e"]:
+            if row.get("t3_dn_e"):  return "🎯 T3 SL-Hunter ↓"
+            if row.get("t1_dn_e"):  return "T1 Đảo Chiều ↓"
+            if row.get("t1s_dn_e"): return "T1S Đảo Chiều ↓"
+            if row.get("t2_dn_e"):  return "T2 Yếu Dần ↓"
+        return "—"
+    de["esig_name"] = de.apply(esig_nm, axis=1)
+    entry_sigs = de[de["bull_sig_e"] | de["bear_sig_e"]].tail(5).iloc[::-1]
+    df.attrs["entry_signals"] = [
+        {"date": str(r["date"])[:10], "close": f"{r['close']:,.0f}",
+         "signal": str(r["esig_name"]),
+         "dir": "↑" if r["bull_sig_e"] else "↓"}
+        for _, r in entry_sigs.iterrows()]
+
     # ── Score /3 ──────────────────────────────────────────────
     df["score"]  = (df["cond1_ok"].astype(int) + df["cond2_ok"].astype(int) +
                     df["cond3_ok"].astype(int))
@@ -692,13 +715,11 @@ def analyze():
             "h4_src":     h4_src,
         }
 
-        sig_df  = result[result["bull_signal"]|result["bear_signal"]].tail(5).iloc[::-1]
-        signals = [{"date":  str(r["date"])[:10],
-                    "close": f"{r['close']:,.0f}",
-                    "score": int(r["score"]),
-                    "signal":str(r["signal_name"]),
-                    "action":["❌","❌","🟡","🟢"][int(r["score"])]}
-                   for _,r in sig_df.iterrows()]
+        # Dùng tín hiệu H4 (đồng bộ với DK3) thay vì khung chính
+        entry_sigs = result.attrs.get("entry_signals", [])
+        signals = [{"date": e["date"], "close": e["close"],
+                    "signal": e["signal"], "dir": e["dir"]}
+                   for e in entry_sigs]
 
         return jsonify({"chart":chart_data, "summary":summary, "signals":signals})
 
