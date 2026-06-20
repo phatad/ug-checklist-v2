@@ -260,9 +260,7 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     df["vol_sig_ok"] = (~UVOL) | (df["volume"].shift(1) >= df["vol_ma"].shift(1) * VSMULT)
     df["vol_fb_ok"]  = (~UVOL) | (df["volume"].shift(1) <= df["vol_ma"].shift(1) * VFMULT)
     # v7_2: volume tăng dần cho T1/T2, volume đột biến cho T3
-    df["vol_seq_ok"] = (~UVOL) | (
-        (df["volume"].shift(1) >= df["vol_ma"].shift(1) * VSMULT) &
-        (df["volume"].shift(3) >= df["vol_ma"].shift(3) * 1.0))
+    df["vol_origin"] = (~UVOL) | (df["volume"].shift(3) >= df["vol_ma"].shift(3) * 1.0)
     df["vol_hunter_ok"] = (~UVOL) | (df["volume"].shift(1) >= df["vol_ma"].shift(1) * VHMULT)
     # backward compat cho bottom bar
     df["vol_ok"] = df["vol_sig_ok"]
@@ -358,16 +356,15 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     de["vol_sig_ok_e"] = (~UVOL) | (de["volume"].shift(1) >= de["vol_ma_e"].shift(1) * VSMULT)
     de["vol_fb_ok_e"]  = (~UVOL) | (de["volume"].shift(1) <= de["vol_ma_e"].shift(1) * VFMULT)
     # v7_2: volume tăng dần qua chuỗi nến (nến gốc [3] cũng phải đủ) cho T1/T2
-    de["vol_seq_ok_e"] = (~UVOL) | (
-        (de["volume"].shift(1) >= de["vol_ma_e"].shift(1) * VSMULT) &
-        (de["volume"].shift(3) >= de["vol_ma_e"].shift(3) * 1.0))
-    # v7_2: volume đột biến mạnh (>=1.5x) cho T3 SL-Hunter
+    # v7__1: tách v_origin (nến gốc [3] >= 1.0x) cho T1
+    de["vol_origin_e"] = (~UVOL) | (de["volume"].shift(3) >= de["vol_ma_e"].shift(3) * 1.0)
+    # v7__1: volume đột biến mạnh (>=1.5x) cho T3 SL-Hunter
     de["vol_hunter_ok_e"] = (~UVOL) | (de["volume"].shift(1) >= de["vol_ma_e"].shift(1) * VHMULT)
 
     def se(col, i): return de[col].shift(i)
     vse   = de["vol_sig_ok_e"]
     vfbe  = de["vol_fb_ok_e"]
-    vseqe = de["vol_seq_ok_e"]
+    vorie = de["vol_origin_e"]
     vhune = de["vol_hunter_ok_e"]
 
     # Tín hiệu nến trên khung entry
@@ -379,20 +376,18 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
                       (se("close",1) < se("open",2)) & vse)
     de["t1_up_e"] = (se("is_bear_e",3) & se("big_body_e",3) & se("sig_big_e",3) &
                      se("is_bull_e",2) & se("lw_dn_e",2)   & se("sig_big_e",2) &
-                     se("is_bull_e",1) & se("big_body_e",1) & se("sig_big_e",1) & vseqe)
+                     se("is_bull_e",1) & se("big_body_e",1) & se("sig_big_e",1) & vse & vorie)
     de["t1_dn_e"] = (se("is_bull_e",3) & se("big_body_e",3) & se("sig_big_e",3) &
                      se("is_bear_e",2) & se("lw_up_e",2)   & se("sig_big_e",2) &
-                     se("is_bear_e",1) & se("big_body_e",1) & se("sig_big_e",1) & vseqe)
+                     se("is_bear_e",1) & se("big_body_e",1) & se("sig_big_e",1) & vse & vorie)
     de["t2_up_e"] = (se("is_bear_e",3) & se("sig_big_e",3) &
                      se("is_bear_e",2) & se("sig_big_e",2) & (se("body_e",2) < se("body_e",3)*0.85) &
                      se("sig_big_e",1) & (se("body_e",1) < se("body_e",2)*0.85) &
-                     (se("close",3) < se("close",5)) &
-                     (se("lw_dn_e",1) | se("is_bull_e",1)) & vseqe)
+                     (se("lw_dn_e",1) | se("is_bull_e",1)) & vse)
     de["t2_dn_e"] = (se("is_bull_e",3) & se("sig_big_e",3) &
                      se("is_bull_e",2) & se("sig_big_e",2) & (se("body_e",2) < se("body_e",3)*0.85) &
                      se("sig_big_e",1) & (se("body_e",1) < se("body_e",2)*0.85) &
-                     (se("close",3) > se("close",5)) &
-                     (se("lw_up_e",1) | se("is_bear_e",1)) & vseqe)
+                     (se("lw_up_e",1) | se("is_bear_e",1)) & vse)
     de["t3_up_e"] = (se("lw_dn_e",2) & se("sig_big_e",2) &
                      se("lw_dn_e",1) & se("sig_big_e",1) &
                      (se("low",1) < se("low",2)) & (se("close",1) > se("close",2)) & vhune)
@@ -443,7 +438,7 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     def s(col, i): return df[col].shift(i)
     vs   = df["vol_sig_ok"]
     vfb  = df["vol_fb_ok"]
-    vseq = df["vol_seq_ok"]
+    vori = df["vol_origin"]
     vhun = df["vol_hunter_ok"]
 
     # T1S: Đỏ dài[2] → Xanh dài[1] đóng trên open[2]
@@ -457,22 +452,20 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     # T1: Đỏ dài[3] → Xanh râu dưới[2] → Xanh dài[1]
     df["t1_up"] = (s("is_bear",3) & s("big_body",3) & s("sig_big",3) &
                    s("is_bull",2) & s("lw_dn",2)   & s("sig_big",2) &
-                   s("is_bull",1) & s("big_body",1) & s("sig_big",1) & vseq)
+                   s("is_bull",1) & s("big_body",1) & s("sig_big",1) & vs & vori)
     df["t1_dn"] = (s("is_bull",3) & s("big_body",3) & s("sig_big",3) &
                    s("is_bear",2) & s("lw_up",2)   & s("sig_big",2) &
-                   s("is_bear",1) & s("big_body",1) & s("sig_big",1) & vseq)
+                   s("is_bear",1) & s("big_body",1) & s("sig_big",1) & vs & vori)
 
     # T2: 3 nến bé dần + context close[3]<close[5]
     df["t2_up"] = (s("is_bear",3) & s("sig_big",3) &
                    s("is_bear",2) & s("sig_big",2) & (s("body",2) < s("body",3)*0.85) &
                    s("sig_big",1) & (s("body",1) < s("body",2)*0.85) &
-                   (s("close",3) < s("close",5)) &
-                   (s("lw_dn",1) | s("is_bull",1)) & vseq)
+                   (s("lw_dn",1) | s("is_bull",1)) & vs)
     df["t2_dn"] = (s("is_bull",3) & s("sig_big",3) &
                    s("is_bull",2) & s("sig_big",2) & (s("body",2) < s("body",3)*0.85) &
                    s("sig_big",1) & (s("body",1) < s("body",2)*0.85) &
-                   (s("close",3) > s("close",5)) &
-                   (s("lw_up",1) | s("is_bear",1)) & vseq)
+                   (s("lw_up",1) | s("is_bear",1)) & vs)
 
     # T3: 2 nến râu, low[1]<low[2], close[1]>close[2]
     df["t3_up"] = (s("lw_dn",2) & s("sig_big",2) &
@@ -606,56 +599,78 @@ def logout():
 def index():
     return render_template("index.html")
 
-@app.route("/test-fireant")
+@app.route("/test-sync")
 @login_required
-def test_fireant():
-    import json as _json
-    out = []
+def test_sync():
+    """Test đồng nhất data giữa chart / tín hiệu bảng / DK3 / H4."""
     sym = request.args.get("sym", "GEL")
-    out.append(f"=== TEST FIREANT cho {sym} ===\n")
+    start = "2024-01-01"
+    out = []
+    out.append(f"=== TEST ĐỒNG NHẤT DATA cho {sym} ===\n")
 
-    import requests
-    # FireAnt historical-quotes endpoint (không chính thức)
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "application/json",
-    }
-
-    # Test 1: Endpoint historical-quotes (nến ngày)
     try:
-        url = f"https://restv2.fireant.vn/symbols/{sym}/historical-quotes"
-        params = {"startDate": "2026-04-01", "endDate": "2026-06-20",
-                  "offset": 0, "limit": 20}
-        r = requests.get(url, params=params, headers=headers, timeout=15)
-        out.append(f"[1] historical-quotes: HTTP {r.status_code}")
-        if r.status_code == 200:
-            data = r.json()
-            out.append(f"    Số nến: {len(data)}")
-            if data:
-                out.append(f"    Mẫu: {_json.dumps(data[0], ensure_ascii=False)[:300]}")
-        else:
-            out.append(f"    Body: {r.text[:200]}")
+        df_h4, h4_src = get_intraday_h4(sym, start)
+        df_zone = get_data(sym, start, timeframe="1D")
+        df_htf  = get_data(sym, start, timeframe="1W")
+
+        out.append(f"Nguồn H4    : {h4_src}")
+        out.append(f"Số nến H4   : {len(df_h4)}")
+        out.append(f"Số nến D    : {len(df_zone)}")
+        out.append(f"Số nến W    : {len(df_htf)}")
+        out.append("")
+
+        cfg = {"swing_len":3,"zone_len":50,"zone_atr_mult":1.5,"body_ratio":0.50,
+               "wick_ratio":0.40,"atr_mult":0.3,"use_volume":True,"vol_ma_len":20,
+               "vol_sig_mult":1.2,"vol_fb_mult":1.5,"vol_hunter_mult":1.5,
+               "use_rsi_div":True,"rsi_len":14,"rr_min":2.0,"account":100_000_000,
+               "risk_pct":2.0,"monthly_loss":6.0,"sl_pct":5.0}
+
+        result = run_checklist(df_zone, df_htf, cfg, df_entry=df_h4)
+
+        # 1. DK3 (nến H4 cuối)
+        dk3_name = result.attrs.get("entry_signal_name", "—")
+        dk3_bull = result.attrs.get("entry_bull", False)
+        dk3_bear = result.attrs.get("entry_bear", False)
+        out.append("─── DK3 (nến H4 mới nhất) ───")
+        out.append(f"  Tín hiệu: {dk3_name}")
+        out.append(f"  Hướng: {'LONG' if dk3_bull else 'SHORT' if dk3_bear else 'Chờ'}")
+        out.append("")
+
+        # 2. Bảng 5 tín hiệu (entry_signals)
+        sigs = result.attrs.get("entry_signals", [])
+        out.append("─── BẢNG 5 tín hiệu H4 ───")
+        for s in sigs:
+            out.append(f"  {s['date']} | {s['dir']} | {s['signal']}")
+        out.append("")
+
+        # 3. Chart markers H4 (entry_signals_all)
+        all_sigs = result.attrs.get("entry_signals_all", [])
+        out.append(f"─── CHART markers H4: {len(all_sigs)} tín hiệu ───")
+        out.append(f"  5 gần nhất: {[s['date']+s['dir'] for s in all_sigs[-5:]]}")
+        out.append("")
+
+        # 4. KIỂM TRA ĐỒNG NHẤT
+        out.append("═══ KIỂM TRA ═══")
+        # Bảng phải nằm trong all_sigs
+        table_dates = set((s['date'], s['dir']) for s in sigs)
+        all_dates = set((s['date'], s['dir']) for s in all_sigs)
+        match = table_dates.issubset(all_dates)
+        out.append(f"  Bảng ⊆ Chart markers: {'✅ KHỚP' if match else '❌ LỆCH'}")
+        # DK3 phải = tín hiệu mới nhất trong all_sigs
+        if all_sigs:
+            latest = all_sigs[-1]
+            latest_dir = "LONG" if latest['dir']=="↑" else "SHORT"
+            dk3_dir = "LONG" if dk3_bull else "SHORT" if dk3_bear else "Chờ"
+            # DK3 chỉ tính nến H4 CUỐI CÙNG, có thể khác tín hiệu gần nhất nếu nến cuối ko phải tín hiệu
+            out.append(f"  DK3 hướng: {dk3_dir} | Tín hiệu H4 mới nhất: {latest_dir} ({latest['date']})")
+        out.append("")
+        out.append(f"  → Nếu KHỚP: chart, bảng, DK3 dùng CHUNG data H4 ({h4_src})")
+
     except Exception as e:
-        out.append(f"[1] LỖI: {repr(e)[:150]}")
+        import traceback
+        out.append("LỖI: " + traceback.format_exc())
 
-    out.append("")
-
-    # Test 2: Endpoint intraday (nến trong ngày)
-    try:
-        url = f"https://restv2.fireant.vn/symbols/{sym}/intraday"
-        r = requests.get(url, params={"limit": 20}, headers=headers, timeout=15)
-        out.append(f"[2] intraday: HTTP {r.status_code}")
-        if r.status_code == 200:
-            data = r.json()
-            out.append(f"    Số bản ghi: {len(data) if isinstance(data, list) else 'N/A'}")
-            if isinstance(data, list) and data:
-                out.append(f"    Mẫu: {_json.dumps(data[0], ensure_ascii=False)[:300]}")
-        else:
-            out.append(f"    Body: {r.text[:200]}")
-    except Exception as e:
-        out.append(f"[2] LỖI: {repr(e)[:150]}")
-
-    return "<pre style='background:#0d1117;color:#0f6;padding:20px;font-size:12px;line-height:1.5'>" + "\n".join(out) + "</pre>"
+    return "<pre style='background:#0d1117;color:#0f6;padding:20px;font-size:12px;line-height:1.6'>" + "\n".join(out) + "</pre>"
 
 @app.route("/analyze", methods=["POST"])
 @login_required
