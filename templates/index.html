@@ -663,15 +663,15 @@ function renderDetail(s, sigs){
       <div class="detail-row"><span class="detail-label">Lỗ tối đa/tháng</span><span class="detail-val" style="color:var(--red)">${s.monthly_loss_vnd}₫</span></div>
     </div>
     <div class="detail-section">
-      <div class="detail-section-title">🕐 5 tín hiệu gần nhất</div>
+      <div class="detail-section-title">🕐 5 tín hiệu gần nhất (H4)</div>
       <table class="sig-full-tbl">
-        <thead><tr><th>Ngày</th><th>Giá</th><th>Điểm</th><th>Tín hiệu</th><th>Action</th></tr></thead>
-        <tbody>${sigs.map(r=>`<tr>
+        <thead><tr><th>Ngày</th><th>Giá</th><th>Hướng</th><th>Tín hiệu</th></tr></thead>
+        <tbody>${sigs.length ? sigs.map(r=>`<tr>
           <td style="color:var(--muted)">${r.date}</td>
           <td style="font-weight:600">${r.close}₫</td>
-          <td><span style="color:${SC[r.score]};font-weight:700">${r.score}/4</span></td>
-          <td>${r.signal}</td><td>${ACTION_SHORT[r.score]}</td>
-        </tr>`).join("")}</tbody>
+          <td style="color:${r.dir==='↑'?'var(--green)':'var(--red)'};font-weight:700">${r.dir==='↑'?'LONG':'SHORT'}</td>
+          <td>${r.signal}</td>
+        </tr>`).join("") : `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:16px">Chưa có tín hiệu H4 nào gần đây</td></tr>`}</tbody>
       </table>
     </div>`;
 }
