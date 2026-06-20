@@ -379,22 +379,51 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
                      se("lw_up_e",1) & se("sig_big_e",1) &
                      (se("high",1) > se("high",2)) & (se("close",1) < se("close",2)) & vhune)
 
-    # Lấy tín hiệu của nến entry mới nhất
+    # False Breakout trên H4: dùng support/resist từ khung D (df_zone = df)
+    # Lấy support/resist hiện tại (nến D cuối) áp cho nến H4
+    cur_support = df["support"].iloc[-1] if "support" in df.columns and len(df) else np.nan
+    cur_resist  = df["resist"].iloc[-1]  if "resist"  in df.columns and len(df) else np.nan
+    cur_in_ht   = bool(df["in_support"].iloc[-1]) if "in_support" in df.columns and len(df) else False
+    cur_in_kc   = bool(df["in_resist"].iloc[-1]) if "in_resist" in df.columns and len(df) else False
+
+    if not np.isnan(cur_support):
+        de["fb_up_e"] = ((se("low",1) < cur_support) & (se("close",1) > cur_support) &
+                         se("lw_dn_e",1) & se("sig_big_e",1) & vfbe)
+    else:
+        de["fb_up_e"] = pd.Series(False, index=de.index)
+    if not np.isnan(cur_resist):
+        de["fb_dn_e"] = ((se("high",1) > cur_resist) & (se("close",1) < cur_resist) &
+                         se("lw_up_e",1) & se("sig_big_e",1) & vfbe)
+    else:
+        de["fb_dn_e"] = pd.Series(False, index=de.index)
+    # Hammer/Shooting Star tại vùng KC/HT (vùng từ D)
+    de["hmr_e"] = (cur_in_ht & se("lw_dn_e",1) & se("sig_big_e",1) &
+                   (se("wick_dn_e",1) >= se("body_e",1)*2.0) & vse)
+    de["shs_e"] = (cur_in_kc & se("lw_up_e",1) & se("sig_big_e",1) &
+                   (se("wick_up_e",1) >= se("body_e",1)*2.0) & vse)
+
+    # Lấy tín hiệu của nến entry mới nhất (đầy đủ như Pine: t3,t1,t1s,fb,hmr,t2)
     last_e = de.iloc[-1]
     entry_bull = bool(last_e.get("t3_up_e",False) or last_e.get("t1_up_e",False) or
-                      last_e.get("t1s_up_e",False) or last_e.get("t2_up_e",False))
+                      last_e.get("t1s_up_e",False) or last_e.get("fb_up_e",False) or
+                      last_e.get("hmr_e",False) or last_e.get("t2_up_e",False))
     entry_bear = bool(last_e.get("t3_dn_e",False) or last_e.get("t1_dn_e",False) or
-                      last_e.get("t1s_dn_e",False) or last_e.get("t2_dn_e",False))
+                      last_e.get("t1s_dn_e",False) or last_e.get("fb_dn_e",False) or
+                      last_e.get("shs_e",False) or last_e.get("t2_dn_e",False))
     def entry_sig_name():
         if entry_bull:
             if last_e.get("t3_up_e"):  return "🎯 T3 SL-Hunter ↑"
+            if last_e.get("fb_up_e"):  return "False Breakout ↑"
             if last_e.get("t1_up_e"):  return "T1 Đảo Chiều ↑"
             if last_e.get("t1s_up_e"): return "T1S Đảo Chiều ↑"
+            if last_e.get("hmr_e"):    return "Hammer ↑"
             if last_e.get("t2_up_e"):  return "T2 Yếu Dần ↑"
         if entry_bear:
             if last_e.get("t3_dn_e"):  return "🎯 T3 SL-Hunter ↓"
+            if last_e.get("fb_dn_e"):  return "False Breakout ↓"
             if last_e.get("t1_dn_e"):  return "T1 Đảo Chiều ↓"
             if last_e.get("t1s_dn_e"): return "T1S Đảo Chiều ↓"
+            if last_e.get("shs_e"):    return "Shooting Star ↓"
             if last_e.get("t2_dn_e"):  return "T2 Yếu Dần ↓"
         return "—"
     entry_signal_name = entry_sig_name()
@@ -491,18 +520,24 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     df.attrs["entry_bear"] = entry_bear
 
     # Lưu 5 tín hiệu H4 gần nhất (đồng bộ với DK3)
-    de["bull_sig_e"] = (de["t3_up_e"] | de["t1_up_e"] | de["t1s_up_e"] | de["t2_up_e"])
-    de["bear_sig_e"] = (de["t3_dn_e"] | de["t1_dn_e"] | de["t1s_dn_e"] | de["t2_dn_e"])
+    de["bull_sig_e"] = (de["t3_up_e"] | de["t1_up_e"] | de["t1s_up_e"] |
+                        de["fb_up_e"] | de["hmr_e"] | de["t2_up_e"])
+    de["bear_sig_e"] = (de["t3_dn_e"] | de["t1_dn_e"] | de["t1s_dn_e"] |
+                        de["fb_dn_e"] | de["shs_e"] | de["t2_dn_e"])
     def esig_nm(row):
         if row["bull_sig_e"]:
             if row.get("t3_up_e"):  return "🎯 T3 SL-Hunter ↑"
+            if row.get("fb_up_e"):  return "False Breakout ↑"
             if row.get("t1_up_e"):  return "T1 Đảo Chiều ↑"
             if row.get("t1s_up_e"): return "T1S Đảo Chiều ↑"
+            if row.get("hmr_e"):    return "Hammer ↑"
             if row.get("t2_up_e"):  return "T2 Yếu Dần ↑"
         if row["bear_sig_e"]:
             if row.get("t3_dn_e"):  return "🎯 T3 SL-Hunter ↓"
+            if row.get("fb_dn_e"):  return "False Breakout ↓"
             if row.get("t1_dn_e"):  return "T1 Đảo Chiều ↓"
             if row.get("t1s_dn_e"): return "T1S Đảo Chiều ↓"
+            if row.get("shs_e"):    return "Shooting Star ↓"
             if row.get("t2_dn_e"):  return "T2 Yếu Dần ↓"
         return "—"
     de["esig_name"] = de.apply(esig_nm, axis=1)
@@ -582,6 +617,40 @@ def logout():
 @login_required
 def index():
     return render_template("index.html")
+
+@app.route("/test-h4")
+@login_required
+def test_h4_multi():
+    """Test nhanh data H4 của nhiều mã. Dùng: /test-h4?syms=GEL,TVN,TNG"""
+    syms = request.args.get("syms", "GEL,TVN,TNG,VNM,HVN,VGT,PET").split(",")
+    start = "2024-01-01"
+    out = ["=== TEST H4 NHIỀU MÃ ===\n"]
+    out.append(f"{'Mã':<8}{'Nguồn':<12}{'Nến H4':<8}{'Nến mới nhất':<22}{'Tín hiệu cuối'}")
+    out.append("─" * 75)
+
+    for sym in syms:
+        sym = sym.strip().upper()
+        if not sym:
+            continue
+        try:
+            df_h4, src = get_intraday_h4(sym, start)
+            last_date = str(df_h4["date"].iloc[-1]) if not df_h4.empty else "—"
+            # Tính tín hiệu nhanh
+            df_zone = get_data(sym, start, timeframe="1D")
+            df_htf = get_data(sym, start, timeframe="1W")
+            cfg = {"swing_len":3,"zone_len":50,"zone_atr_mult":1.5,"body_ratio":0.50,
+                   "wick_ratio":0.40,"atr_mult":0.3,"use_volume":True,"vol_ma_len":20,
+                   "vol_sig_mult":1.2,"vol_fb_mult":1.5,"vol_hunter_mult":1.5,
+                   "use_rsi_div":True,"rsi_len":14,"rr_min":2.0,"account":100_000_000,
+                   "risk_pct":2.0,"monthly_loss":6.0,"sl_pct":5.0}
+            result = run_checklist(df_zone, df_htf, cfg, df_entry=df_h4)
+            sig = result.attrs.get("entry_signal_name", "—")
+            n_sig = len(result.attrs.get("entry_signals_all", []))
+            out.append(f"{sym:<8}{src:<12}{len(df_h4):<8}{last_date:<22}{sig} ({n_sig} tín hiệu)")
+        except Exception as e:
+            out.append(f"{sym:<8}LỖI: {str(e)[:50]}")
+
+    return "<pre style='background:#0d1117;color:#0f6;padding:20px;font-size:13px;line-height:1.6'>" + "\n".join(out) + "</pre>"
 
 @app.route("/test-sync")
 @login_required
