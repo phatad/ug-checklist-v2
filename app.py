@@ -606,6 +606,57 @@ def logout():
 def index():
     return render_template("index.html")
 
+@app.route("/test-fireant")
+@login_required
+def test_fireant():
+    import json as _json
+    out = []
+    sym = request.args.get("sym", "GEL")
+    out.append(f"=== TEST FIREANT cho {sym} ===\n")
+
+    import requests
+    # FireAnt historical-quotes endpoint (không chính thức)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json",
+    }
+
+    # Test 1: Endpoint historical-quotes (nến ngày)
+    try:
+        url = f"https://restv2.fireant.vn/symbols/{sym}/historical-quotes"
+        params = {"startDate": "2026-04-01", "endDate": "2026-06-20",
+                  "offset": 0, "limit": 20}
+        r = requests.get(url, params=params, headers=headers, timeout=15)
+        out.append(f"[1] historical-quotes: HTTP {r.status_code}")
+        if r.status_code == 200:
+            data = r.json()
+            out.append(f"    Số nến: {len(data)}")
+            if data:
+                out.append(f"    Mẫu: {_json.dumps(data[0], ensure_ascii=False)[:300]}")
+        else:
+            out.append(f"    Body: {r.text[:200]}")
+    except Exception as e:
+        out.append(f"[1] LỖI: {repr(e)[:150]}")
+
+    out.append("")
+
+    # Test 2: Endpoint intraday (nến trong ngày)
+    try:
+        url = f"https://restv2.fireant.vn/symbols/{sym}/intraday"
+        r = requests.get(url, params={"limit": 20}, headers=headers, timeout=15)
+        out.append(f"[2] intraday: HTTP {r.status_code}")
+        if r.status_code == 200:
+            data = r.json()
+            out.append(f"    Số bản ghi: {len(data) if isinstance(data, list) else 'N/A'}")
+            if isinstance(data, list) and data:
+                out.append(f"    Mẫu: {_json.dumps(data[0], ensure_ascii=False)[:300]}")
+        else:
+            out.append(f"    Body: {r.text[:200]}")
+    except Exception as e:
+        out.append(f"[2] LỖI: {repr(e)[:150]}")
+
+    return "<pre style='background:#0d1117;color:#0f6;padding:20px;font-size:12px;line-height:1.5'>" + "\n".join(out) + "</pre>"
+
 @app.route("/analyze", methods=["POST"])
 @login_required
 def analyze():
