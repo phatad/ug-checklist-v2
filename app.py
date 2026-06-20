@@ -83,7 +83,7 @@ def find_pivot_low(series, left, right):
 # ═══════════════════════════════════════════════════════════════
 def _normalize(df):
     df = df.copy()
-    # yfinance trả MultiIndex columns (tuple) → flatten lấy level 0
+    # Một số nguồn trả MultiIndex columns (tuple) → flatten lấy level 0
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = [c[0] if isinstance(c, tuple) else c for c in df.columns]
     df.columns = [str(c).lower() for c in df.columns]
@@ -129,59 +129,26 @@ def get_data(symbol, start, end=None, timeframe="1D"):
     except Exception as e:
         log.warning(f"vnstock3: {e}")
 
-    try:
-        import yfinance as yf, socket
-        socket.setdefaulttimeout(20)
-        ticker = symbol+".VN" if not symbol.endswith(".VN") else symbol
-        df = _normalize(yf.download(ticker, start=start, end=end,
-                                    auto_adjust=True, progress=False,
-                                    timeout=15).reset_index())
-        if not df.empty:
-            log.info(f"yfinance OK: {ticker} {len(df)} nến")
-            return df
-    except Exception as e:
-        log.warning(f"yfinance: {e}")
-
-    raise RuntimeError(f"Không lấy được data cho '{symbol}'.")
+    raise RuntimeError(f"Không lấy được data cho '{symbol}' (chỉ dùng vnstock).")
 
 # Cache H4 ở mức module: {symbol: (df, src, timestamp)}
 _H4_CACHE = {}
 _H4_TTL = 600  # 10 phút
 
 def get_intraday_h4(symbol, start, end=None):
-    """Lấy data khung H4 cho DK3. yfinance 4h → vnstock 1H gộp → fallback D.
-    Có cache 10 phút để tránh rate limit khi chạy nhiều mã."""
+    """Lấy data khung H4 cho DK3 — CHỈ dùng vnstock 1H gộp thành H4.
+    Gộp theo nửa phiên (sáng/chiều) để khớp giờ giao dịch VN, tránh lệch giờ nghỉ trưa.
+    Có cache 10 phút."""
     import time as _time
     end = end or date.today().strftime("%Y-%m-%d")
 
-    # Check cache trước
+    # Cache
     cached = _H4_CACHE.get(symbol)
     if cached and (_time.time() - cached[2] < _H4_TTL):
         log.info(f"H4 cache hit: {symbol} ({cached[1]})")
         return cached[0].copy(), cached[1]
 
-    # 1. yfinance 4h — retry 3 lần, dùng Ticker.history (ổn định hơn download)
-    ticker = symbol+".VN" if not symbol.endswith(".VN") else symbol
-    for attempt in range(3):
-        try:
-            import yfinance as yf, socket
-            socket.setdefaulttimeout(25)
-            tk = yf.Ticker(ticker)
-            df = tk.history(period="60d", interval="4h", auto_adjust=True)
-            df = _normalize(df.reset_index())
-            if not df.empty and len(df) > 20:
-                log.info(f"H4 yfinance OK: {symbol} {len(df)} nến (lần {attempt+1})")
-                _H4_CACHE[symbol] = (df, "H4", _time.time())
-                return df.copy(), "H4"
-            else:
-                log.warning(f"H4 yfinance lần {attempt+1}: chỉ {len(df)} nến")
-        except Exception as e:
-            log.warning(f"H4 yfinance lần {attempt+1}: {e}")
-        # delay tăng dần: 1s, 2s
-        if attempt < 2:
-            _time.sleep(1.0 * (attempt + 1))
-
-    # 2. vnstock 1H rồi gộp 4 nến thành H4
+    # vnstock 1H → gộp H4 theo nửa phiên
     try:
         from vnstock import stock_historical_data
         import inspect
@@ -191,31 +158,48 @@ def get_intraday_h4(symbol, start, end=None):
               stock_historical_data(symbol, start, end, interval="1H", asset_type="stock"))
         df = _normalize(df)
         if not df.empty and len(df) > 20:
-            # Gộp 1H → 4H: lấy mỗi 4 nến
-            df = df.set_index("date")
-            agg = df.resample("4h").agg({"open":"first","high":"max",
-                                          "low":"min","close":"last","volume":"sum"}).dropna()
-            agg = agg.reset_index()
+            agg = _resample_h4_session(df)
             if not agg.empty:
-                import time as _t
                 log.info(f"H4 vnstock(1H→4H) OK: {symbol} {len(agg)} nến")
-                _H4_CACHE[symbol] = (agg, "H4(1H)", _t.time())
+                _H4_CACHE[symbol] = (agg, "H4(1H)", _time.time())
                 return agg.copy(), "H4(1H)"
     except Exception as e:
         log.warning(f"H4 vnstock 1H: {e}")
 
-    # 3. Fallback: dùng khung ngày
+    # vnstock3 1H fallback
     try:
-        df = get_data(symbol, start, end, timeframe="1D")
-        if not df.empty:
-            import time as _t
-            log.info(f"H4 fallback Daily: {symbol} {len(df)} nến")
-            # KHÔNG cache fallback — để lần sau thử lại H4 thật
-            return df, "D(fallback)"
+        from vnstock3 import Vnstock
+        df = Vnstock().stock(symbol=symbol, source="VCI").quote.history(
+            start=start, end=end, interval="1H")
+        df = _normalize(df)
+        if not df.empty and len(df) > 20:
+            agg = _resample_h4_session(df)
+            if not agg.empty:
+                log.info(f"H4 vnstock3(1H→4H) OK: {symbol} {len(agg)} nến")
+                _H4_CACHE[symbol] = (agg, "H4(1H)", _time.time())
+                return agg.copy(), "H4(1H)"
     except Exception as e:
-        log.warning(f"H4 fallback: {e}")
+        log.warning(f"H4 vnstock3 1H: {e}")
 
-    return pd.DataFrame(), "N/A"
+    # Không lấy được H4 → báo lỗi rõ ràng (KHÔNG fallback sang khung ngày)
+    raise RuntimeError(f"Không lấy được data H4 (1H) cho '{symbol}'. vnstock/vnstock3 đều thất bại.")
+
+def _resample_h4_session(df):
+    """Gộp nến 1H thành H4 theo nửa phiên giao dịch VN.
+    Phiên VN: sáng 9h-11h30, chiều 13h-15h (nghỉ trưa 11h30-13h).
+    Gộp: nửa sáng (giờ < 12) = 1 nến H4, nửa chiều (giờ >= 12) = 1 nến H4.
+    → Mỗi ngày đúng 2 nến H4 đều đặn, không lệch như resample('4h')."""
+    d = df.copy()
+    d = d.sort_values("date").reset_index(drop=True)
+    d["_day"] = d["date"].dt.date
+    d["_sess"] = (d["date"].dt.hour >= 12).map({False: 0, True: 1})  # 0=sáng, 1=chiều
+    agg = (d.groupby(["_day", "_sess"])
+             .agg(date=("date", "first"), open=("open", "first"),
+                  high=("high", "max"), low=("low", "min"),
+                  close=("close", "last"), volume=("volume", "sum"))
+             .reset_index(drop=True)
+             .sort_values("date").reset_index(drop=True))
+    return agg
 
 # ═══════════════════════════════════════════════════════════════
 #  CHECKLIST v6
