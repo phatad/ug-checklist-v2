@@ -529,12 +529,27 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
             if row.get("t2_dn_e"):  return "T2 Yếu Dần ↓"
         return "—"
     de["esig_name"] = de.apply(esig_nm, axis=1)
-    entry_sigs = de[de["bull_sig_e"] | de["bear_sig_e"]].tail(5).iloc[::-1]
+    # Nếu ENTRY là df_entry (H4) VÀ df chính cũng là H4 (cùng data) → gắn cột tín hiệu vào df
+    # để chart vẽ marker khớp. So sánh bằng độ dài + date cuối.
+    same_as_main = (df_entry is not None and not df_entry.empty and
+                    len(de) == len(df) and
+                    de["date"].iloc[-1] == df["date"].iloc[-1])
+    if same_as_main:
+        df["h4_bull_mk"] = de["bull_sig_e"].values
+        df["h4_bear_mk"] = de["bear_sig_e"].values
+    all_entry = de[de["bull_sig_e"] | de["bear_sig_e"]]
+    # 5 gần nhất cho bảng
+    entry_sigs = all_entry.tail(5).iloc[::-1]
     df.attrs["entry_signals"] = [
         {"date": str(r["date"])[:10], "close": f"{r['close']:,.0f}",
          "signal": str(r["esig_name"]),
          "dir": "↑" if r["bull_sig_e"] else "↓"}
         for _, r in entry_sigs.iterrows()]
+    # Tất cả (trong 200 nến cuối) cho chart markers
+    df.attrs["entry_signals_all"] = [
+        {"date": str(r["date"])[:10],
+         "dir": "↑" if r["bull_sig_e"] else "↓"}
+        for _, r in all_entry.tail(200).iterrows()]
 
     # ── Score /3 ──────────────────────────────────────────────
     df["score"]  = (df["cond1_ok"].astype(int) + df["cond2_ok"].astype(int) +
@@ -656,6 +671,13 @@ def analyze():
             "bull_3": sig_recs((chart_df["score"].astype(int)==2) & chart_df["bull_signal"], "low"),
             "bear_3": sig_recs((chart_df["score"].astype(int)==2) & chart_df["bear_signal"], "high"),
         }
+
+        # v7: Khi chart H4, vẽ marker trực tiếp từ cột tín hiệu H4 (khớp bảng + DK3)
+        if tf_chart == "4H" and "h4_bull_mk" in chart_df.columns:
+            chart_data["bull_4"] = sig_recs(chart_df["h4_bull_mk"].fillna(False), "low")
+            chart_data["bear_4"] = sig_recs(chart_df["h4_bear_mk"].fillna(False), "high")
+            chart_data["bull_3"] = []
+            chart_data["bear_3"] = []
 
         trend_txt = (f"▲ UPTREND [{row['trend_src']}]"  if row["is_uptrend"]   else
                      f"▼ DOWNTREND [{row['trend_src']}]" if row["is_downtrend"] else
