@@ -640,12 +640,12 @@ function renderDetail(s, sigs){
     <div class="detail-section">
       <div class="detail-section-title">📊 Tổng quan — ${s.symbol} | ${s.date}</div>
       <div class="detail-row"><span class="detail-label">Giá hiện tại</span><span class="detail-val">${s.close}₫</span></div>
-      <div class="detail-row"><span class="detail-label">Điểm checklist</span><span class="detail-val" style="color:${scoreCol}">${s.score}/4</span></div>
+      <div class="detail-row"><span class="detail-label">Điểm checklist</span><span class="detail-val" style="color:${scoreCol}">${s.score}/${s.score_max||3}</span></div>
       <div class="detail-row"><span class="detail-label">Quyết định</span><span class="detail-val" style="color:${scoreCol}">${s.action}</span></div>
       <div class="detail-row"><span class="detail-label">Hướng</span><span class="detail-val">${s.direction}</span></div>
     </div>
     <div class="detail-section">
-      <div class="detail-section-title">✅ 4 Điều kiện</div>
+      <div class="detail-section-title">✅ 3 Điều kiện</div>
       ${[["1","Xu hướng rõ","cond1","cond1_txt"],
          ["2","KC/HT + R:R","cond2","cond2_txt"],
          ["3","Nến đảo chiều","cond3","cond3_txt"]].map(([n,name,ck,ct])=>`
