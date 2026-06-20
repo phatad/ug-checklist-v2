@@ -636,20 +636,31 @@ def analyze():
             "sl_pct":        float(data.get("sl_pct", 5.0)),
         }
 
-        df_h4, h4_src = get_intraday_h4(symbol, start)   # v7: DK3 dùng H4
-        # Chart hiển thị: nếu chọn H4 thì dùng data H4 luôn
+        df_h4, h4_src = get_intraday_h4(symbol, start)   # DK3: H4
+        df_zone = get_data(symbol, start, timeframe="1D")  # DK2: LUÔN khung Ngày (D)
+        df_htf  = get_data(symbol, start, timeframe=tf_ref) # DK1: khung Tuần (W)
+
+        # Chart hiển thị: theo nút D/H4 người dùng chọn (chỉ để xem, không ảnh hưởng checklist)
         if tf_chart == "4H":
-            df_main = df_h4.copy() if not df_h4.empty else get_data(symbol, start, timeframe="1D")
+            df_chart = df_h4.copy() if not df_h4.empty else df_zone.copy()
         else:
-            df_main = get_data(symbol, start, timeframe=tf_chart)
-        df_htf  = get_data(symbol, start, timeframe=tf_ref)
-        if df_main.empty:
+            df_chart = df_zone.copy()
+        if df_zone.empty:
             return jsonify({"error": f"Không có dữ liệu cho '{symbol}'"}), 400
 
-        result   = run_checklist(df_main, df_htf, cfg, df_entry=df_h4)
+        # Checklist LUÔN tính: DK1=W (df_htf), DK2=D (df_zone), DK3=H4 (df_h4)
+        # df_zone là khung chính cho KC/HT + R:R + score
+        result   = run_checklist(df_zone, df_htf, cfg, df_entry=df_h4)
+
+        # Chart: nếu xem H4, tính checklist riêng trên H4 để vẽ zones/markers khớp chart H4
+        # (chỉ phục vụ hiển thị, KHÔNG ảnh hưởng điểm số chính)
+        if tf_chart == "4H" and not df_h4.empty:
+            chart_result = run_checklist(df_chart, df_htf, cfg, df_entry=df_h4)
+        else:
+            chart_result = result
         row      = result.iloc[-1]
         score    = int(row["score"])
-        chart_df = result.tail(200).copy()
+        chart_df = chart_result.tail(200).copy()
         chart_df["date_str"] = chart_df["date"].dt.strftime("%Y-%m-%d")
 
         def sl(col): return [safe(x) for x in chart_df[col]] if col in chart_df else []
