@@ -1,5 +1,5 @@
 """
-UG Checklist v6 — Web App (Flask)
+UG Checklist v8 — Web App (Flask)
 3 điều kiện:
   DK1: Xu hướng PA pivot + EMA backup
   DK2: Vùng KC/HT + R:R >= 2.0 (gộp lại)
@@ -216,6 +216,7 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     VSMULT  = cfg["vol_sig_mult"]
     VFMULT  = cfg["vol_fb_mult"]
     VHMULT  = cfg.get("vol_hunter_mult", 1.5)
+    USEFIBO = cfg.get("use_fibo", True)
     URSIDIV = cfg["use_rsi_div"]
     RSILEN  = cfg["rsi_len"]
     RR_MIN  = cfg["rr_min"]
@@ -296,9 +297,35 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     df["near_resist"] = df["in_resist"]
     df["near_support"] = df["in_support"]
 
-    df["cond2_zone"] = ((is_up & df["in_support"]) |
-                        (is_dn & df["in_resist"])  |
-                        (is_sw & (df["in_support"] | df["in_resist"])))
+    # v8: Fibo Retracement 38.2/50/61.8% từ swing (ZLEN nến)
+    fibo_range = df["resist"] - df["support"]
+    fibo_zone  = df["atr14"] * 0.8
+    if USEFIBO:
+        # Fibo HT (uptrend): các mức tính từ resist xuống
+        f618 = df["resist"] - fibo_range * 0.618
+        f500 = df["resist"] - fibo_range * 0.500
+        f382 = df["resist"] - fibo_range * 0.382
+        df["in_fibo_ht"] = ((df["close"] - f618).abs() <= fibo_zone) | \
+                           ((df["close"] - f500).abs() <= fibo_zone) | \
+                           ((df["close"] - f382).abs() <= fibo_zone)
+        # Fibo KC (downtrend): các mức tính từ support lên
+        g382 = df["support"] + fibo_range * 0.382
+        g500 = df["support"] + fibo_range * 0.500
+        g618 = df["support"] + fibo_range * 0.618
+        df["in_fibo_kc"] = ((df["close"] - g382).abs() <= fibo_zone) | \
+                           ((df["close"] - g500).abs() <= fibo_zone) | \
+                           ((df["close"] - g618).abs() <= fibo_zone)
+    else:
+        df["in_fibo_ht"] = False
+        df["in_fibo_kc"] = False
+
+    # v8: vùng đầy đủ = KC/HT chính HOẶC Fibo (thuận chiều xu hướng)
+    df["in_ht_full"] = df["in_support"] | (is_up & df["in_fibo_ht"])
+    df["in_kc_full"] = df["in_resist"]  | (is_dn & df["in_fibo_kc"])
+
+    df["cond2_zone"] = ((is_up & df["in_ht_full"]) |
+                        (is_dn & df["in_kc_full"]) |
+                        (is_sw & (df["in_resist"] | df["in_support"])))
 
     # v6: R:R dùng nến đã đóng [1] làm SL
     # LONG: SL=low[1], TP=resist
@@ -378,13 +405,25 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     de["t3_dn_e"] = (se("lw_up_e",2) & se("sig_big_e",2) &
                      se("lw_up_e",1) & se("sig_big_e",1) &
                      (se("high",1) > se("high",2)) & (se("close",1) < se("close",2)) & vhune)
+    # v8: T3 Max (Fakey) — nến dài [4] → 2 nến nhỏ tích lũy [3][2] → nến cuối [1] quét SL
+    def fakey_inner_e(i):
+        return ((se("high",i) <= se("high",4)) & (se("low",i) >= se("low",4)) &
+                (se("body_e",i) < se("body_e",4)*0.5))
+    de["t3max_up_e"] = (se("sig_big_e",4) & se("is_bear_e",4) &
+                        fakey_inner_e(3) & fakey_inner_e(2) &
+                        se("lw_dn_e",1) & se("sig_big_e",1) &
+                        (se("low",1) < se("low",4)) & (se("close",1) > se("open",4)) & vhune)
+    de["t3max_dn_e"] = (se("sig_big_e",4) & se("is_bull_e",4) &
+                        fakey_inner_e(3) & fakey_inner_e(2) &
+                        se("lw_up_e",1) & se("sig_big_e",1) &
+                        (se("high",1) > se("high",4)) & (se("close",1) < se("open",4)) & vhune)
 
     # False Breakout trên H4: dùng support/resist từ khung D (df_zone = df)
     # Lấy support/resist hiện tại (nến D cuối) áp cho nến H4
     cur_support = df["support"].iloc[-1] if "support" in df.columns and len(df) else np.nan
     cur_resist  = df["resist"].iloc[-1]  if "resist"  in df.columns and len(df) else np.nan
-    cur_in_ht   = bool(df["in_support"].iloc[-1]) if "in_support" in df.columns and len(df) else False
-    cur_in_kc   = bool(df["in_resist"].iloc[-1]) if "in_resist" in df.columns and len(df) else False
+    cur_in_ht   = bool(df["in_ht_full"].iloc[-1]) if "in_ht_full" in df.columns and len(df) else False
+    cur_in_kc   = bool(df["in_kc_full"].iloc[-1]) if "in_kc_full" in df.columns and len(df) else False
 
     if not np.isnan(cur_support):
         de["fb_up_e"] = ((se("low",1) < cur_support) & (se("close",1) > cur_support) &
@@ -402,16 +441,26 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     de["shs_e"] = (cur_in_kc & se("lw_up_e",1) & se("sig_big_e",1) &
                    (se("wick_up_e",1) >= se("body_e",1)*2.0) & vse)
 
-    # Lấy tín hiệu của nến entry mới nhất (đầy đủ như Pine: t3,t1,t1s,fb,hmr,t2)
+    # v8: Cảnh báo 4+ nến râu dài liên tiếp = tín hiệu yếu đi (Bí Kíp Ti Nến Phần V)
+    de["consec_wick_dn_e"] = (se("lw_dn_e",1) & se("lw_dn_e",2) &
+                              se("lw_dn_e",3) & se("lw_dn_e",4))
+    de["consec_wick_up_e"] = (se("lw_up_e",1) & se("lw_up_e",2) &
+                              se("lw_up_e",3) & se("lw_up_e",4))
+    de["signal_weak_e"] = de["consec_wick_dn_e"] | de["consec_wick_up_e"]
+
+    # Lấy tín hiệu của nến entry mới nhất (đầy đủ như Pine: t3max,t3,fb,t1,t1s,hmr,t2)
     last_e = de.iloc[-1]
-    entry_bull = bool(last_e.get("t3_up_e",False) or last_e.get("t1_up_e",False) or
-                      last_e.get("t1s_up_e",False) or last_e.get("fb_up_e",False) or
-                      last_e.get("hmr_e",False) or last_e.get("t2_up_e",False))
-    entry_bear = bool(last_e.get("t3_dn_e",False) or last_e.get("t1_dn_e",False) or
-                      last_e.get("t1s_dn_e",False) or last_e.get("fb_dn_e",False) or
-                      last_e.get("shs_e",False) or last_e.get("t2_dn_e",False))
+    entry_bull = bool(last_e.get("t3max_up_e",False) or last_e.get("t3_up_e",False) or
+                      last_e.get("fb_up_e",False) or last_e.get("t1_up_e",False) or
+                      last_e.get("t1s_up_e",False) or last_e.get("hmr_e",False) or
+                      last_e.get("t2_up_e",False))
+    entry_bear = bool(last_e.get("t3max_dn_e",False) or last_e.get("t3_dn_e",False) or
+                      last_e.get("fb_dn_e",False) or last_e.get("t1_dn_e",False) or
+                      last_e.get("t1s_dn_e",False) or last_e.get("shs_e",False) or
+                      last_e.get("t2_dn_e",False))
     def entry_sig_name():
         if entry_bull:
+            if last_e.get("t3max_up_e"): return "⚡ T3 Max (Fakey) ↑"
             if last_e.get("t3_up_e"):  return "🎯 T3 SL-Hunter ↑"
             if last_e.get("fb_up_e"):  return "False Breakout ↑"
             if last_e.get("t1_up_e"):  return "T1 Đảo Chiều ↑"
@@ -419,6 +468,7 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
             if last_e.get("hmr_e"):    return "Hammer ↑"
             if last_e.get("t2_up_e"):  return "T2 Yếu Dần ↑"
         if entry_bear:
+            if last_e.get("t3max_dn_e"): return "⚡ T3 Max (Fakey) ↓"
             if last_e.get("t3_dn_e"):  return "🎯 T3 SL-Hunter ↓"
             if last_e.get("fb_dn_e"):  return "False Breakout ↓"
             if last_e.get("t1_dn_e"):  return "T1 Đảo Chiều ↓"
@@ -488,6 +538,19 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
                    s("lw_up",1) & s("sig_big",1) &
                    (s("high",1) > s("high",2)) & (s("close",1) < s("close",2)) & vhun)
 
+    # v8: T3 Max (Fakey) khung chính
+    def fakey_inner(i):
+        return ((s("high",i) <= s("high",4)) & (s("low",i) >= s("low",4)) &
+                (s("body",i) < s("body",4)*0.5))
+    df["t3max_up"] = (s("sig_big",4) & s("is_bear",4) &
+                      fakey_inner(3) & fakey_inner(2) &
+                      s("lw_dn",1) & s("sig_big",1) &
+                      (s("low",1) < s("low",4)) & (s("close",1) > s("open",4)) & vhun)
+    df["t3max_dn"] = (s("sig_big",4) & s("is_bull",4) &
+                      fakey_inner(3) & fakey_inner(2) &
+                      s("lw_up",1) & s("sig_big",1) &
+                      (s("high",1) > s("high",4)) & (s("close",1) < s("open",4)) & vhun)
+
     # False Breakout (dùng vol_fb)
     df["fb_resist"]  = ((s("high",1) > df["resist"]) & (s("close",1) < df["resist"]) &
                         s("lw_up",1) & s("sig_big",1) & vfb)
@@ -495,14 +558,14 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
                         s("lw_dn",1) & s("sig_big",1) & vfb)
 
     # Hammer/Shooting Star chỉ tại KC/HT
-    df["hammer_up"]   = (df["in_support"] & s("lw_dn",1) & s("sig_big",1) &
+    df["hammer_up"]   = (df["in_ht_full"] & s("lw_dn",1) & s("sig_big",1) &
                          (s("wick_dn",1) >= s("body",1) * 2.0) & vs)
-    df["shooting_dn"] = (df["in_resist"]  & s("lw_up",1) & s("sig_big",1) &
+    df["shooting_dn"] = (df["in_kc_full"] & s("lw_up",1) & s("sig_big",1) &
                          (s("wick_up",1) >= s("body",1) * 2.0) & vs)
 
-    df["bull_signal"] = (df["t3_up"] | df["t1_up"] | df["t1s_up"] | df["t2_up"] |
+    df["bull_signal"] = (df["t3max_up"] | df["t3_up"] | df["t1_up"] | df["t1s_up"] | df["t2_up"] |
                          df["fb_support"] | df["hidden_div_bull"] | df["hammer_up"])
-    df["bear_signal"] = (df["t3_dn"] | df["t1_dn"] | df["t1s_dn"] | df["t2_dn"] |
+    df["bear_signal"] = (df["t3max_dn"] | df["t3_dn"] | df["t1_dn"] | df["t1s_dn"] | df["t2_dn"] |
                          df["fb_resist"] | df["hidden_div_bear"] | df["shooting_dn"])
 
     # cond3 trên khung chính (cho lịch sử chart)
@@ -518,14 +581,16 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
     df.attrs["entry_signal_name"] = entry_signal_name
     df.attrs["entry_bull"] = entry_bull
     df.attrs["entry_bear"] = entry_bear
+    df.attrs["signal_weak"] = bool(last_e.get("signal_weak_e", False))
 
     # Lưu 5 tín hiệu H4 gần nhất (đồng bộ với DK3)
-    de["bull_sig_e"] = (de["t3_up_e"] | de["t1_up_e"] | de["t1s_up_e"] |
+    de["bull_sig_e"] = (de["t3max_up_e"] | de["t3_up_e"] | de["t1_up_e"] | de["t1s_up_e"] |
                         de["fb_up_e"] | de["hmr_e"] | de["t2_up_e"])
-    de["bear_sig_e"] = (de["t3_dn_e"] | de["t1_dn_e"] | de["t1s_dn_e"] |
+    de["bear_sig_e"] = (de["t3max_dn_e"] | de["t3_dn_e"] | de["t1_dn_e"] | de["t1s_dn_e"] |
                         de["fb_dn_e"] | de["shs_e"] | de["t2_dn_e"])
     def esig_nm(row):
         if row["bull_sig_e"]:
+            if row.get("t3max_up_e"): return "⚡ T3 Max (Fakey) ↑"
             if row.get("t3_up_e"):  return "🎯 T3 SL-Hunter ↑"
             if row.get("fb_up_e"):  return "False Breakout ↑"
             if row.get("t1_up_e"):  return "T1 Đảo Chiều ↑"
@@ -533,6 +598,7 @@ def run_checklist(df_ltf, df_htf, cfg, df_entry=None):
             if row.get("hmr_e"):    return "Hammer ↑"
             if row.get("t2_up_e"):  return "T2 Yếu Dần ↑"
         if row["bear_sig_e"]:
+            if row.get("t3max_dn_e"): return "⚡ T3 Max (Fakey) ↓"
             if row.get("t3_dn_e"):  return "🎯 T3 SL-Hunter ↓"
             if row.get("fb_dn_e"):  return "False Breakout ↓"
             if row.get("t1_dn_e"):  return "T1 Đảo Chiều ↓"
@@ -746,6 +812,7 @@ def analyze():
             "vol_sig_mult":  float(data.get("vol_sig_mult", 1.2)),
             "vol_fb_mult":   float(data.get("vol_fb_mult", 1.5)),
             "vol_hunter_mult": float(data.get("vol_hunter_mult", 1.5)),
+            "use_fibo":        bool(data.get("use_fibo", True)),
             "use_rsi_div":   bool(data.get("use_rsi_div", True)),
             "rsi_len":       int(data.get("rsi_len", 14)),
             "rr_min":        float(data.get("rr_min", 2.0)),
@@ -865,6 +932,7 @@ def analyze():
             "chart_tf":   (h4_src if tf_chart == "4H" else tf_chart),
             "chart_bars": len(chart_df),
             "h4_src":     h4_src,
+            "signal_weak": result.attrs.get("signal_weak", False),
         }
 
         # Dùng tín hiệu H4 (đồng bộ với DK3) thay vì khung chính
