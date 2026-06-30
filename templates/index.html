@@ -619,7 +619,8 @@ function showSummary(s){
   document.getElementById("aScore").style.color=col;
   document.getElementById("aLabel").textContent=s.action;
   document.getElementById("aLabel").style.color=col;
-  document.getElementById("aDir").textContent=s.symbol+" | "+s.direction;
+  document.getElementById("aDir").textContent=s.symbol+" | "+s.direction +
+    (s.signal_weak ? " ⚠️ 4+ râu (yếu)" : "");
   document.getElementById("bSym").textContent=s.symbol;
   document.getElementById("bClose").textContent=s.close+"₫";
   document.getElementById("bRsi").textContent=s.rsi;
